@@ -124,6 +124,189 @@
       display:none;
       z-index:100;
     }
+
+    /* ── TL;DR ── */
+    .tldr {
+      background: linear-gradient(180deg, #171717 0%, #131313 100%);
+      border:1px solid #2a2a2a;
+      border-left:3px solid #e63946;
+      border-radius:0 6px 6px 0;
+      padding:1.2rem 1.4rem;
+      margin:2rem 0 3rem;
+    }
+    .tldr-label {
+      font-size:.7rem;
+      letter-spacing:1.5px;
+      text-transform:uppercase;
+      color:#e63946;
+      font-weight:700;
+      margin-bottom:.7rem;
+    }
+    .tldr ul { list-style:none; padding:0; margin:0; }
+    .tldr li {
+      padding:.4rem 0;
+      color:#ddd;
+      font-size:.95rem;
+      border-bottom:1px solid #222;
+    }
+    .tldr li:last-child { border-bottom:0; }
+    .tldr li strong { color:#e63946; font-weight:700; }
+
+    /* ── The Numbers grid ── */
+    .numbers {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+      gap:1px;
+      background:#2a2a2a;
+      border:1px solid #2a2a2a;
+      border-radius:4px;
+      margin:2rem 0;
+      overflow:hidden;
+    }
+    .num-cell {
+      background:#131313;
+      padding:1rem 1.1rem;
+      display:flex;
+      flex-direction:column;
+      gap:.2rem;
+    }
+    .num-val {
+      font-size:1.6rem;
+      font-weight:800;
+      color:#e63946;
+      letter-spacing:-1px;
+      line-height:1;
+    }
+    .num-lbl {
+      font-size:.68rem;
+      color:#777;
+      letter-spacing:.7px;
+      text-transform:uppercase;
+    }
+    .num-note { font-size:.7rem; color:#555; margin-top:.15rem; }
+
+    /* ── Surprise callout ── */
+    .surprise {
+      background:#161616;
+      border:1px solid #2a2a2a;
+      border-radius:6px;
+      padding:1.4rem 1.5rem;
+      margin:2rem 0;
+    }
+    .surprise-tag {
+      display:inline-block;
+      font-size:.68rem;
+      letter-spacing:1.5px;
+      text-transform:uppercase;
+      color:#e63946;
+      font-weight:700;
+      margin-bottom:.5rem;
+    }
+    .surprise h3 { font-size:1rem; margin:.2rem 0 .6rem; color:#e8e8e8; }
+    .surprise p  { color:#bbb; font-size:.9rem; margin-bottom:.6rem; }
+    .surprise p:last-child { margin-bottom:0; }
+
+    /* ── Search bar ── */
+    .search-wrap {
+      display:flex;
+      align-items:center;
+      gap:.6rem;
+      padding:.6rem .8rem;
+      background:#131313;
+      border:1px solid #2a2a2a;
+      border-bottom:none;
+      border-radius:4px 4px 0 0;
+    }
+    .search-wrap input {
+      flex:1;
+      background:#0d0d0d;
+      border:1px solid #2a2a2a;
+      color:#e8e8e8;
+      padding:.4rem .7rem;
+      border-radius:4px;
+      font-size:.82rem;
+      font-family:inherit;
+      outline:none;
+    }
+    .search-wrap input:focus { border-color:#457b9d; }
+    .search-wrap .hint { color:#555; font-size:.72rem; }
+    #search-result { color:#457b9d; font-size:.75rem; font-weight:600; min-width:100px; }
+    #search-result.miss { color:#e76f51; }
+
+    /* ── Degree distribution toggles ── */
+    .dist-controls {
+      display:flex;
+      gap:.5rem;
+      align-items:center;
+      padding:.6rem .8rem;
+      background:#131313;
+      border:1px solid #2a2a2a;
+      border-bottom:none;
+      border-radius:4px 4px 0 0;
+      flex-wrap:wrap;
+    }
+    .dist-controls .grp {
+      display:inline-flex;
+      border:1px solid #2a2a2a;
+      border-radius:4px;
+      overflow:hidden;
+    }
+    .dist-btn {
+      background:#0d0d0d;
+      color:#666;
+      border:none;
+      padding:.3rem .7rem;
+      font-size:.72rem;
+      font-weight:600;
+      cursor:pointer;
+      font-family:inherit;
+      letter-spacing:.4px;
+    }
+    .dist-btn.active { background:#e63946; color:#fff; }
+    .dist-btn:hover:not(.active) { color:#e8e8e8; }
+    .dist-lbl { font-size:.7rem; color:#666; letter-spacing:.6px; text-transform:uppercase; margin-right:.2rem; }
+
+    /* ── Legends strip below interactive header ── */
+    #legend-strip {
+      padding:.7rem 1.2rem;
+      border-bottom:1px solid #2a2a2a;
+      background:#0d0d0d;
+    }
+    #legend-strip .legend, #legend-strip #comm-legend { margin:0; }
+
+    /* ── References ── */
+    .refs {
+      font-size:.85rem;
+      color:#999;
+      background:#131313;
+      border:1px solid #2a2a2a;
+      border-radius:6px;
+      padding:1.2rem 1.4rem;
+      margin:2.5rem 0 0;
+    }
+    .refs h3 {
+      font-size:.7rem;
+      letter-spacing:1.5px;
+      text-transform:uppercase;
+      color:#666;
+      font-weight:700;
+      margin-bottom:.6rem;
+    }
+    .refs ul { padding-left:1.1rem; margin:0; }
+    .refs li { margin-bottom:.3rem; color:#bbb; }
+    .refs a { color:#457b9d; }
+
+    /* ── Fade-in scroll animation ── */
+    .figure, .tldr, .numbers, .surprise, .refs {
+      opacity:0;
+      transform:translateY(12px);
+      transition:opacity .6s ease-out, transform .6s ease-out;
+    }
+    .figure.visible, .tldr.visible, .numbers.visible,
+    .surprise.visible, .refs.visible {
+      opacity:1;
+      transform:translateY(0);
+    }
   </style>
 </head>
 <body>
@@ -138,12 +321,34 @@
 
 <article class="post-wrap">
 
-  <p class="post-meta">Week 01 · 2 September 2026</p>
+  <p class="post-meta">Week 01 · 2 September 2026 · 02805 Social Graphs</p>
   <h1>Main Character Syndrome in the Marvel Universe</h1>
   <p class="post-intro">
     Every character has two numbers: how many others link to them (fame), and how many they link to (reach).
     The gap between those two numbers tells you exactly where you stand in the Marvel hierarchy.
   </p>
+
+  <div class="tldr">
+    <div class="tldr-label">TL;DR — 3 things we learned</div>
+    <ul>
+      <li><strong>Direction matters.</strong> An undirected network hides who <em>talks about whom</em>. Once you look at in vs out separately, four distinct social archetypes emerge from the same 303 nodes.</li>
+      <li><strong>Spider-Man is a genuine hub.</strong> 106 characters reference him — that's <strong>18×</strong> the average in-degree. Removing him leaves the network standing; removing his cluster does not.</li>
+      <li><strong>Isolation ≠ obscurity.</strong> Baymax (a $650M movie franchise) is as network-invisible as Super Rabbit (a 1943 Bugs Bunny parody). Wikipedia's link graph doesn't care about box office.</li>
+    </ul>
+  </div>
+
+  <h2>The numbers, cold</h2>
+  <p>Before any story, here's the raw structure of the Marvel Wikipedia link network we're working with:</p>
+  <div class="numbers">
+    <div class="num-cell"><span class="num-val">303</span><span class="num-lbl">Characters</span><span class="num-note">Nodes (17 isolated)</span></div>
+    <div class="num-cell"><span class="num-val">1,784</span><span class="num-lbl">Directed edges</span><span class="num-note">Wiki-links</span></div>
+    <div class="num-cell"><span class="num-val">1,434</span><span class="num-lbl">Undirected pairs</span><span class="num-note">350 mutual · 1,084 one-way</span></div>
+    <div class="num-cell"><span class="num-val">9.47</span><span class="num-lbl">Avg degree</span><span class="num-note">2E/N (undirected)</span></div>
+    <div class="num-cell"><span class="num-val">3.14 %</span><span class="num-lbl">Density</span><span class="num-note">2E / N(N−1)</span></div>
+    <div class="num-cell"><span class="num-val">277</span><span class="num-lbl">Giant component</span><span class="num-note">91.4% of nodes</span></div>
+    <div class="num-cell"><span class="num-val">25</span><span class="num-lbl">Communities</span><span class="num-note">Greedy modularity</span></div>
+    <div class="num-cell"><span class="num-val">106</span><span class="num-lbl">Max in-degree</span><span class="num-note">Spider-Man</span></div>
+  </div>
 
   <h2>Two numbers, four archetypes</h2>
   <p>
@@ -162,17 +367,56 @@
   </div>
 
   <div class="figure" id="fig-quadrant">
-    <svg id="quad-svg" style="width:100%;height:420px;display:block;background:#0d0d0d;cursor:grab"></svg>
-    <figcaption>All 303 characters on log-log axes. Dashed lines = medians. Hover to identify. Scroll to zoom, drag to pan.</figcaption>
+    <div class="search-wrap">
+      <span class="dist-lbl">Find character</span>
+      <input id="quad-search" type="text" placeholder="Type a name — e.g. Spider-Man, Baymax, Shamrock" autocomplete="off">
+      <span id="search-result"></span>
+      <span class="hint">Scroll to zoom · drag to pan</span>
+    </div>
+    <svg id="quad-svg" style="width:100%;height:440px;display:block;background:#0d0d0d;cursor:grab"></svg>
+    <figcaption>All 303 characters on log-log axes. Dashed lines = medians. Hover to identify. Search highlights a match with a ring.</figcaption>
+  </div>
+
+  <h2>The shape of the degree distribution</h2>
+  <p>
+    Marvel's in-degree distribution has the classic heavy tail you see in most real-world networks:
+    most characters get referenced a handful of times, while a small elite get referenced dozens.
+    The out-degree is more compressed — Wikipedia articles have limited real-estate — but still skewed.
+    On a log-log axis both distributions look roughly linear, consistent with a scale-free-ish structure
+    (Barabási, ch. 4). Switch the axes below to see it directly.
+  </p>
+
+  <div class="figure" id="fig-degdist">
+    <div class="dist-controls">
+      <span class="dist-lbl">Scale</span>
+      <span class="grp">
+        <button class="dist-btn active" data-scale="linear" onclick="setDistScale('linear')">Linear</button>
+        <button class="dist-btn"        data-scale="log"    onclick="setDistScale('log')">Log-log</button>
+      </span>
+      <span class="dist-lbl" style="margin-left:.6rem">Show</span>
+      <span class="grp">
+        <button class="dist-btn active" data-which="both" onclick="setDistWhich('both')">Both</button>
+        <button class="dist-btn"        data-which="in"   onclick="setDistWhich('in')">In-degree</button>
+        <button class="dist-btn"        data-which="out"  onclick="setDistWhich('out')">Out-degree</button>
+      </span>
+    </div>
+    <svg id="degdist-svg" style="width:100%;height:360px;display:block;background:#0d0d0d"></svg>
+    <figcaption>Degree distribution. Toggle linear vs log-log. On log-log, an approximately straight line hints at scale-free behaviour.</figcaption>
   </div>
 
   <h2>The Legends — genuinely famous, low engagement</h2>
   <p>
     These 34 characters have massive in-degree relative to their out-degree. The Marvel universe
     constantly references them; their own Wikipedia articles barely mention anyone else.
-    <strong>Ms. Marvel</strong> (in=11, out=1) and <strong>Quasar</strong> (in=24, out=3) are extreme cases.
-    They're not suffering from syndrome — they actually ARE the story.
+    <strong>Ms. Marvel</strong> (in=11, out=1) and <strong>Quasar</strong> (in=24, out=3) are extreme.
+    They aren't suffering from syndrome — they actually ARE the story. Ranked by
+    <em>Main-Character Score</em> = in / (out + 1):
   </p>
+
+  <div class="figure" id="fig-legends">
+    <svg id="legends-svg" style="width:100%;height:360px;display:block;background:#0d0d0d"></svg>
+    <figcaption>Top 12 by Main-Character Score = in / (out + 1). Spider-Man's 10.6 is off the chart — literally 10× the average.</figcaption>
+  </div>
 
   <h2>Main Character Syndrome — the delusion, ranked</h2>
   <p>
@@ -216,12 +460,27 @@
     — a 1943 Bugs Bunny parody character. In network terms, fame in the real world means nothing here.
   </p>
 
+  <div class="surprise">
+    <span class="surprise-tag">What surprised us</span>
+    <h3>Three things we did not expect</h3>
+    <p>
+      <strong>1. Baymax is invisible.</strong> A robot from a billion-dollar franchise has the same network profile as a 1943 Bugs Bunny parody. Wikipedia editors don't cross-link cross-medium characters.
+    </p>
+    <p>
+      <strong>2. Spider-Man is not the linker — he's the linked.</strong> He points to only 9 characters, but 106 point to him. His Main-Character Score (10.6) is <em>ten times</em> the average. He is the archetype we now know as a Legend, not a Mutual Celebrity.
+    </p>
+    <p>
+      <strong>3. Whole storylines can be network islands.</strong> The Morituri bubble — 9 tightly linked characters from one 1980s arc — has zero edges to the giant component. Community detection didn't find them; graph traversal did.
+    </p>
+  </div>
+
   <h2>What happens when you delete Spider-Man?</h2>
   <p>
     The interactive below lets you remove the highest in-degree character from the network one at a time.
     Nodes that get stranded — cut off from the giant component — glow orange.
     Watch whether removing a celebrity actually breaks the network, or whether the Mutual Celebrities
-    quietly hold everything together.
+    quietly hold everything together. Toggle to <strong>By Community</strong> to see the 25 clusters the
+    greedy-modularity algorithm found.
   </p>
 
 </article>
@@ -231,20 +490,21 @@
   <div id="interactive-wrap">
     <div id="interactive-header">
       <h3>Remove the top node — watch the network react</h3>
-      <div style="display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;">
-        <div class="mode-toggle">
-          <button class="mode-btn active" onclick="setMode('archetype')">By Archetype</button>
-          <button class="mode-btn"        onclick="setMode('community')">By Community</button>
-        </div>
-        <div id="archetype-legend" class="legend" style="margin:0;">
-          <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div>The Legends</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div>Mutual Celebrity</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div>MCS</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Who Invited You</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#f4a261"></div>Stranded</div>
-        </div>
-        <div id="comm-legend"></div>
+      <div class="mode-toggle">
+        <button class="mode-btn active" onclick="setMode('archetype')">By Archetype</button>
+        <button class="mode-btn"        onclick="setMode('community')">By Community</button>
       </div>
+    </div>
+    <div id="legend-strip">
+      <div id="archetype-legend" class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div>The Legends</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div>Mutual Celebrity</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div>Main Character Syndrome</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Who Invited You</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f4a261"></div>Stranded (glowing)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:transparent;border:2px dashed #9b5de5"></div>Next to remove</div>
+      </div>
+      <div id="comm-legend"></div>
     </div>
     <div id="interactive-body">
       <svg id="network-svg"></svg>
@@ -266,6 +526,19 @@
         <div id="removed-list"><span style="color:#444">none yet</span></div>
       </div>
     </div>
+  </div>
+
+  <!-- Methodology & references -->
+  <div class="refs">
+    <h3>Method & data</h3>
+    <ul>
+      <li><strong>Data:</strong> The frozen Week 1 snapshot of the Marvel Comics superheroes Wikipedia category (303 characters, 1,784 directed wiki-links) provided with the course.</li>
+      <li><strong>Tools:</strong> Python / NetworkX for graph analysis and community detection; D3.js v7 for every visualisation on this page (rendered from <code>network.json</code> + <code>charts.json</code>).</li>
+      <li><strong>Community detection:</strong> Greedy modularity maximisation (<code>nx.community.greedy_modularity_communities</code>) on the undirected projection — 25 communities.</li>
+      <li><strong>Isolated nodes preserved:</strong> All 17 zero-degree characters are kept in every count and every visualisation.</li>
+      <li><strong>Reading:</strong> Barabási, <em>Network Science</em>, ch. 2 (Graph theory) and ch. 4 (Scale-free property).</li>
+      <li><strong>Source:</strong> <a href="https://github.com/simonesskovgaard/Social-Interactions-and-Graphs" target="_blank">github.com/simonesskovgaard/Social-Interactions-and-Graphs</a></li>
+    </ul>
   </div>
 </div>
 
@@ -295,11 +568,27 @@ const QLABELS = {
   main_character_syndrome:'Main Character Syndrome', who_invited_you:'Who Invited You',
 };
 
+let CHARTS_DATA = null;
 fetch('../assets/data/charts.json').then(r => r.json()).then(data => {
+  CHARTS_DATA = data;
   drawQuadrant(data.quad);
+  drawLegends(data.legends);
   drawMCS(data.mcs);
   drawMorituri(data.morituri_nodes, data.morituri_edges);
+  drawDegDist();
+  initScrollReveal();
 });
+
+// ── Scroll-triggered fade-in ─────────────────────────────────────────────────
+function initScrollReveal() {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+    });
+  }, {threshold: 0.12});
+  document.querySelectorAll('.figure, .tldr, .numbers, .surprise, .refs')
+    .forEach(el => io.observe(el));
+}
 
 // ── Fig 1: Quadrant scatter ───────────────────────────────────────────────────
 function drawQuadrant(data) {
@@ -405,13 +694,197 @@ function drawQuadrant(data) {
         .attr('y', d => yS(Math.max(0.85, d.in_deg)) + 4);
   }
 
-  render(xBase, yBase);
+  // Search ring — appended to dataG so clip-path applies and it moves with dots
+  const searchRing = dataG.append('circle')
+    .attr('fill','none').attr('stroke','#e63946').attr('stroke-width',2.5)
+    .attr('stroke-dasharray','4,3').attr('r', 14).attr('opacity', 0)
+    .attr('pointer-events','none');
+  let matchedName = null;
+  function refreshSearchRing() {
+    if (!matchedName) return;
+    const m = dots.filter(d => d.name === matchedName).node();
+    if (m) searchRing.attr('cx', m.getAttribute('cx')).attr('cy', m.getAttribute('cy'));
+  }
 
-  // Zoom: rescale axes from the base, then re-render
-  svg.call(
-    d3.zoom().scaleExtent([0.5, 20])
-      .on('zoom', e => render(e.transform.rescaleX(xBase), e.transform.rescaleY(yBase)))
-  ).on('dblclick.zoom', null);
+  // Render + search-ring reposition on every zoom
+  const combinedRender = (xS, yS) => { render(xS, yS); refreshSearchRing(); };
+  combinedRender(xBase, yBase);
+
+  svg.call(d3.zoom().scaleExtent([0.5, 20])
+    .on('zoom', e => combinedRender(e.transform.rescaleX(xBase), e.transform.rescaleY(yBase))))
+    .on('dblclick.zoom', null);
+
+  const input  = document.getElementById('quad-search');
+  const result = document.getElementById('search-result');
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) {
+      searchRing.attr('opacity', 0);
+      dots.attr('opacity', 0.85);
+      result.textContent = ''; result.classList.remove('miss');
+      matchedName = null;
+      return;
+    }
+    const matches = data.filter(d => d.name.toLowerCase().includes(q));
+    if (!matches.length) {
+      result.textContent = 'no match'; result.classList.add('miss');
+      searchRing.attr('opacity', 0);
+      dots.attr('opacity', 0.85);
+      matchedName = null;
+      return;
+    }
+    result.classList.remove('miss');
+    result.textContent = matches.length === 1
+      ? `→ ${matches[0].name.replace(/\s*\(.*\)/, '')}`
+      : `${matches.length} matches`;
+    const nameSet = new Set(matches.map(m => m.name));
+    dots.attr('opacity', d => nameSet.has(d.name) ? 1 : 0.15);
+    const top = matches.sort((a,b) => (b.in_deg+b.out_deg) - (a.in_deg+a.out_deg))[0];
+    matchedName = top.name;
+    searchRing.attr('opacity', 1);
+    refreshSearchRing();
+  });
+}
+
+// ── Fig 1b: The Legends bar chart ─────────────────────────────────────────────
+function drawLegends(data) {
+  const el = document.getElementById('legends-svg');
+  const W  = el.clientWidth || 680, H = 360;
+  const m  = {top:20, right:110, bottom:30, left:160};
+  const iW = W - m.left - m.right, iH = H - m.top - m.bottom;
+
+  const svg = d3.select('#legends-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g   = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  const x = d3.scaleLinear().domain([0, d3.max(data, d => d.score)*1.08]).range([0, iW]);
+  const y = d3.scaleBand().domain(data.map(d => d.name)).range([0, iH]).padding(0.25);
+
+  g.append('g').call(d3.axisLeft(y).tickSize(0))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('text').attr('fill','#bbb').attr('font-size',10)
+      .text(t => t.replace(/\s*\(.*\)/, '')));
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(5).tickSize(4))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',9));
+
+  const bars = g.selectAll('rect').data(data).enter().append('rect')
+    .attr('x', 0).attr('y', d => y(d.name))
+    .attr('height', y.bandwidth())
+    .attr('width', 0)
+    .attr('fill', '#e63946').attr('rx', 2).attr('opacity', 0.9)
+    .on('mousemove', (e,d) => showTT(e,
+      `<strong>${d.name}</strong><br>Main-Character Score: ${d.score}<br>in:${d.in_deg} · out:${d.out_deg}`))
+    .on('mouseleave', hideTT);
+
+  bars.transition().duration(700).delay((_,i)=>i*40)
+    .attr('width', d => x(d.score));
+
+  g.selectAll('text.val').data(data).enter().append('text')
+    .attr('x', d => x(d.score) + 5).attr('y', d => y(d.name) + y.bandwidth()/2 + 4)
+    .attr('fill','#888').attr('font-size', 9)
+    .text(d => `${d.score}  (in=${d.in_deg}, out=${d.out_deg})`);
+}
+
+// ── Fig 2b: Degree distribution (in + out, linear or log-log) ────────────────
+let DIST_STATE = { scale: 'linear', which: 'both' };
+
+function setDistScale(s) {
+  DIST_STATE.scale = s;
+  document.querySelectorAll('.dist-btn[data-scale]').forEach(b =>
+    b.classList.toggle('active', b.dataset.scale === s));
+  drawDegDist();
+}
+function setDistWhich(w) {
+  DIST_STATE.which = w;
+  document.querySelectorAll('.dist-btn[data-which]').forEach(b =>
+    b.classList.toggle('active', b.dataset.which === w));
+  drawDegDist();
+}
+
+function drawDegDist() {
+  if (!CHARTS_DATA) return;
+  const el = document.getElementById('degdist-svg');
+  const W  = el.clientWidth || 680, H = 360;
+  const m  = {top:20, right:20, bottom:44, left:52};
+  const iW = W - m.left - m.right, iH = H - m.top - m.bottom;
+
+  d3.select('#degdist-svg').selectAll('*').remove();
+  const svg = d3.select('#degdist-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  const inData  = CHARTS_DATA.degree_dist.in;
+  const outData = CHARTS_DATA.degree_dist.out;
+  const isLog = DIST_STATE.scale === 'log';
+  const shownIn  = DIST_STATE.which !== 'out';
+  const shownOut = DIST_STATE.which !== 'in';
+
+  const maxDeg = Math.max(CHARTS_DATA.degree_dist.max_in, CHARTS_DATA.degree_dist.max_out);
+  const maxCount = Math.max(
+    d3.max(inData,  d => d.count),
+    d3.max(outData, d => d.count)
+  );
+
+  const x = isLog
+    ? d3.scaleLog().domain([0.9, maxDeg * 1.1]).range([0, iW])
+    : d3.scaleLinear().domain([0, maxDeg * 1.02]).range([0, iW]);
+  const y = isLog
+    ? d3.scaleLog().domain([0.8, maxCount * 1.2]).range([iH, 0])
+    : d3.scaleLinear().domain([0, maxCount * 1.05]).range([iH, 0]);
+
+  // Grid
+  g.append('g').attr('transform', `translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(isLog ? 5 : 8, isLog ? '~s' : 'd').tickSize(-iH))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('.tick line').attr('stroke','#1e1e1e'))
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+  g.append('g')
+    .call(d3.axisLeft(y).ticks(isLog ? 5 : 6, isLog ? '~s' : 'd').tickSize(-iW))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('.tick line').attr('stroke','#1e1e1e'))
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+
+  g.append('text').attr('x', iW/2).attr('y', iH+36).attr('text-anchor','middle')
+    .attr('fill','#666').attr('font-size',11).text('Degree k');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-38)
+    .attr('text-anchor','middle').attr('fill','#666').attr('font-size',11)
+    .text('Number of characters');
+
+  // Filter zero-degree bin out of log-log to keep the plot readable
+  const filt = arr => isLog ? arr.filter(d => d.deg > 0) : arr;
+
+  if (shownIn) {
+    g.selectAll('circle.in').data(filt(inData)).enter().append('circle')
+      .attr('class','in')
+      .attr('cx', d => x(Math.max(isLog ? 1 : 0, d.deg)))
+      .attr('cy', d => y(Math.max(isLog ? 1 : 0, d.count)))
+      .attr('r', 4).attr('fill', '#e63946').attr('opacity', 0.85)
+      .attr('stroke', '#0d0d0d').attr('stroke-width', 1)
+      .on('mousemove', (e,d) => showTT(e, `<strong>In-degree ${d.deg}</strong><br>${d.count} characters`))
+      .on('mouseleave', hideTT);
+  }
+  if (shownOut) {
+    g.selectAll('circle.out').data(filt(outData)).enter().append('circle')
+      .attr('class','out')
+      .attr('cx', d => x(Math.max(isLog ? 1 : 0, d.deg)))
+      .attr('cy', d => y(Math.max(isLog ? 1 : 0, d.count)))
+      .attr('r', 4).attr('fill', '#457b9d').attr('opacity', 0.85)
+      .attr('stroke', '#0d0d0d').attr('stroke-width', 1)
+      .on('mousemove', (e,d) => showTT(e, `<strong>Out-degree ${d.deg}</strong><br>${d.count} characters`))
+      .on('mouseleave', hideTT);
+  }
+
+  // Chart legend
+  const lg = g.append('g').attr('transform', `translate(${iW - 130}, 8)`);
+  if (shownIn) {
+    lg.append('circle').attr('cx',6).attr('cy',6).attr('r',4).attr('fill','#e63946');
+    lg.append('text').attr('x',16).attr('y',10).attr('fill','#ccc').attr('font-size',10).text('In-degree');
+  }
+  if (shownOut) {
+    const yy = shownIn ? 22 : 6;
+    lg.append('circle').attr('cx',6).attr('cy',yy).attr('r',4).attr('fill','#457b9d');
+    lg.append('text').attr('x',16).attr('y',yy+4).attr('fill','#ccc').attr('font-size',10).text('Out-degree');
+  }
 }
 
 // ── Fig 2: MCS bar chart ──────────────────────────────────────────────────────
@@ -767,22 +1240,33 @@ function setMode(mode) {
 function buildCommLegend() {
   const el = document.getElementById('comm-legend');
 
-  // Find the highest in-degree node per community — that's the community's "face"
-  const topByComm = {};
+  // Group nodes by community, then find each community's "face" (highest in-degree)
+  const byComm = {};
   allNodes.forEach(n => {
     const c = n.community;
-    if (!topByComm[c] || n.in_deg > topByComm[c].in_deg) topByComm[c] = n;
+    if (!byComm[c]) byComm[c] = { face: n, size: 1 };
+    else {
+      byComm[c].size++;
+      if (n.in_deg > byComm[c].face.in_deg) byComm[c].face = n;
+    }
   });
 
-  const ids = Object.keys(topByComm).map(Number).sort((a, b) => a - b);
-  el.innerHTML = ids.map(c => {
-    const top = topByComm[c];
-    const color = COMM_PALETTE[c % COMM_PALETTE.length];
-    const label = top.name.replace(/\s*\(.*\)/, '').trim();
-    return `<div class="comm-item">
-      <div class="comm-dot" style="background:${color}"></div>${label}
+  // Rank communities by size (largest first) — show top 10 with labels, rest as count
+  const ranked = Object.entries(byComm)
+    .map(([id, info]) => ({ id: +id, size: info.size, face: info.face }))
+    .sort((a, b) => b.size - a.size);
+  const shown = ranked.slice(0, 10);
+  const hidden = ranked.length - shown.length;
+
+  el.innerHTML = shown.map(c => {
+    const color = COMM_PALETTE[c.id % COMM_PALETTE.length];
+    const label = c.face.name.replace(/\s*\(.*\)/, '').trim();
+    return `<div class="comm-item" title="Community ${c.id} · ${c.size} characters">
+      <div class="comm-dot" style="background:${color}"></div>${label} <span style="color:#555;font-size:.7rem">·${c.size}</span>
     </div>`;
-  }).join('');
+  }).join('') + (hidden > 0
+    ? `<div class="comm-item" style="color:#555">+${hidden} smaller</div>`
+    : '');
 }
 </script>
 
