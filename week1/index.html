@@ -48,6 +48,31 @@
     }
     #ctrl .stat-row { font-size:.82rem; color:#888; display:flex; justify-content:space-between; }
     #ctrl .stat-row span { color:#e8e8e8; font-weight:600; }
+
+    /* Pinned action block — buttons stay at same y as you spam */
+    .action-block {
+      display:flex; flex-direction:column; gap:.55rem;
+      padding-bottom:.9rem; border-bottom:1px solid #2a2a2a;
+    }
+    .qty-row {
+      display:flex; align-items:center; gap:.4rem;
+      background:#0d0d0d; border:1px solid #2a2a2a;
+      border-radius:4px; padding:.35rem .5rem;
+    }
+    .qty-lbl { font-size:.72rem; color:#888; letter-spacing:.4px; }
+    #remove-count {
+      flex:1; min-width:0; width:100%;
+      background:transparent; border:none;
+      color:#e8e8e8; font-family:inherit;
+      font-size:.9rem; font-weight:700; text-align:center;
+      outline:none; padding:.1rem 0;
+      -moz-appearance:textfield;
+    }
+    #remove-count::-webkit-outer-spin-button,
+    #remove-count::-webkit-inner-spin-button {
+      -webkit-appearance:none; margin:0;
+    }
+
     #next-box {
       background:#161616;
       border:1px solid #2a2a2a;
@@ -55,8 +80,18 @@
       padding:.7rem;
       font-size:.82rem;
       color:#888;
+      /* lock size so long character names never shift anything above/below */
+      min-height:96px;
     }
-    #next-box strong { display:block; color:#e63946; font-size:.95rem; margin-bottom:.2rem; }
+    #next-box .next-lbl {
+      font-size:.62rem; letter-spacing:1px; text-transform:uppercase;
+      color:#666; margin-bottom:.25rem;
+    }
+    #next-box strong {
+      display:block; color:#e63946; font-size:.95rem;
+      margin-bottom:.3rem; white-space:nowrap; overflow:hidden;
+      text-overflow:ellipsis;
+    }
     #ctrl button {
       width:100%;
       padding:.6rem;
@@ -491,12 +526,12 @@
     <div id="interactive-header">
       <h3>Remove the top node — watch the network react</h3>
       <div class="mode-toggle">
-        <button class="mode-btn active" onclick="setMode('archetype')">By Archetype</button>
-        <button class="mode-btn"        onclick="setMode('community')">By Community</button>
+        <button class="mode-btn"        onclick="setMode('archetype')">By Archetype</button>
+        <button class="mode-btn active" onclick="setMode('community')">By Community</button>
       </div>
     </div>
     <div id="legend-strip">
-      <div id="archetype-legend" class="legend">
+      <div id="archetype-legend" class="legend" style="display:none">
         <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div>The Legends</div>
         <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div>Mutual Celebrity</div>
         <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div>Main Character Syndrome</div>
@@ -504,26 +539,41 @@
         <div class="legend-item"><div class="legend-dot" style="background:#f4a261"></div>Stranded (glowing)</div>
         <div class="legend-item"><div class="legend-dot" style="background:transparent;border:2px dashed #9b5de5"></div>Next to remove</div>
       </div>
-      <div id="comm-legend"></div>
+      <div id="comm-legend" class="visible"></div>
     </div>
     <div id="interactive-body">
       <svg id="network-svg"></svg>
       <div id="ctrl">
+        <!-- pinned action block — never moves as you click -->
+        <div class="action-block">
+          <div class="qty-row">
+            <span class="qty-lbl">Remove</span>
+            <input id="remove-count" type="number" min="1" max="303" value="1"
+                   oninput="updateRemoveLabel()" onkeydown="if(event.key==='Enter')removeTopN()">
+            <span class="qty-lbl">top&nbsp;nodes</span>
+          </div>
+          <button id="btn-remove" onclick="removeTopN()">Remove ↑ top <span id="remove-count-lbl">1</span></button>
+          <button id="btn-reset"  onclick="resetNetwork()">Reset</button>
+        </div>
+
+        <div id="next-box">
+          <div class="next-lbl">Next up ↑</div>
+          <strong id="next-name">Loading…</strong>
+          <div>in-degree: <span id="next-indeg">—</span></div>
+          <div>archetype: <span id="next-arch">—</span></div>
+        </div>
+
         <div>
           <div class="stat-row">Total nodes <span id="s-nodes">303</span></div>
           <div class="stat-row">Giant component <span id="s-giant">277</span></div>
           <div class="stat-row">Stranded <span id="s-stranded">0</span></div>
           <div class="stat-row">Removed <span id="s-removed">0</span></div>
         </div>
-        <div id="next-box">
-          <strong id="next-name">Loading…</strong>
-          <div>in-degree: <span id="next-indeg">—</span></div>
-          <div>archetype: <span id="next-arch">—</span></div>
+
+        <div>
+          <div style="font-size:.75rem;color:#555;margin-bottom:.2rem">Removed:</div>
+          <div id="removed-list"><span style="color:#444">none yet</span></div>
         </div>
-        <button id="btn-remove" onclick="removeTop()">Remove ↑ top node</button>
-        <button id="btn-reset"  onclick="resetNetwork()">Reset</button>
-        <div style="font-size:.75rem;color:#555;margin-top:.3rem">Removed:</div>
-        <div id="removed-list"><span style="color:#444">none yet</span></div>
       </div>
     </div>
   </div>
@@ -994,7 +1044,7 @@ const COMM_PALETTE = [
 let allNodes = [], allLinks = [], numCommunities = 25;
 let removedIds = new Set(), prevStranded = new Set();
 let giantIds = new Set();
-let colorMode = 'archetype';
+let colorMode = 'community';
 let simulation, svg, g, linkSel, nodeSel, pulseCircle;
 let topNodeData = null;
 const tooltip = document.getElementById('tooltip');
@@ -1087,8 +1137,11 @@ function initViz() {
 
   simulation = d3.forceSimulation()
     .force('link',    d3.forceLink().id(d => d.id).distance(50).strength(0.3))
-    .force('charge',  d3.forceManyBody().strength(-130))
+    .force('charge',  d3.forceManyBody().strength(-130).distanceMax(260))
     .force('center',  d3.forceCenter(W/2, H/2))
+    // per-node spring toward centre keeps stranded/isolated nodes in frame
+    .force('x',       d3.forceX(W/2).strength(0.045))
+    .force('y',       d3.forceY(H/2).strength(0.06))
     .force('collide', d3.forceCollide().radius(d => nodeR(d) + 3))
     .on('tick', ticked);
 
@@ -1158,6 +1211,21 @@ function rebind() {
 }
 
 function ticked() {
+  // Hard bounds so nothing escapes the visible canvas
+  const wrap = document.getElementById('network-svg');
+  const W = +wrap.getAttribute('width')  || 700;
+  const H = +wrap.getAttribute('height') || 620;
+  const pad = 12;
+  const sim = simulation.nodes();
+  for (let i = 0; i < sim.length; i++) {
+    const n = sim[i];
+    const r = nodeR(n) + pad;
+    if (n.x < r)         n.x = r;
+    else if (n.x > W - r) n.x = W - r;
+    if (n.y < r)         n.y = r;
+    else if (n.y > H - r) n.y = H - r;
+  }
+
   linkSel.selectAll('line')
     .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
     .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
@@ -1212,18 +1280,37 @@ function updatePanel() {
       }).join('');
 }
 
-function removeTop() {
-  const top = nextTop();
-  if (!top) return;
-  removedIds.add(top.id);
+function updateRemoveLabel() {
+  const input = document.getElementById('remove-count');
+  let n = parseInt(input.value, 10);
+  if (!Number.isFinite(n) || n < 1) n = 1;
+  const remaining = allNodes.length - removedIds.size;
+  if (n > remaining) n = Math.max(1, remaining);
+  input.value = n;
+  document.getElementById('remove-count-lbl').textContent = n;
+}
+
+function removeTopN() {
+  updateRemoveLabel();
+  const n = parseInt(document.getElementById('remove-count').value, 10) || 1;
+  const remaining = allNodes.filter(x => !removedIds.has(x.id))
+    .sort((a, b) => b.in_deg - a.in_deg);
+  if (!remaining.length) return;
+  const take = Math.min(n, remaining.length);
+  for (let i = 0; i < take; i++) removedIds.add(remaining[i].id);
   rebind();
   updatePanel();
 }
+
+// Backwards-compat single-node remove (kept in case anything still calls it)
+function removeTop() { removeTopN(); }
 
 function resetNetwork() {
   removedIds.clear();
   prevStranded.clear();
   giantIds = new Set();
+  const input = document.getElementById('remove-count');
+  if (input) { input.value = 1; updateRemoveLabel(); }
   rebind();
   updatePanel();
 }
