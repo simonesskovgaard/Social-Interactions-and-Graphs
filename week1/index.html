@@ -163,13 +163,10 @@
     <div class="legend-item"><div class="legend-dot" style="background:#333"></div> <strong>Who Invited You</strong> &nbsp;(94) — low in, low out. Barely exist.</div>
   </div>
 
-  <figure class="figure">
-    <img src="../assets/img/fig1_quadrant.png" alt="Quadrant scatter of all 303 Marvel characters">
-    <figcaption>
-      All 303 characters on log-log axes. Dashed lines = median in-degree (3) and out-degree (4).
-      Node colour encodes archetype.
-    </figcaption>
-  </figure>
+  <div class="figure" id="fig-quadrant">
+    <svg id="quad-svg" style="width:100%;height:420px;display:block;background:#0d0d0d;cursor:grab"></svg>
+    <figcaption>All 303 characters on log-log axes. Dashed lines = medians. Hover to identify. Scroll to zoom, drag to pan.</figcaption>
+  </div>
 
   <h2>Main Characters — the purest Main Character Syndrome</h2>
   <p>
@@ -180,10 +177,10 @@
     about ten others point back.
   </p>
 
-  <figure class="figure">
-    <img src="../assets/img/fig3_mcs.png" alt="Main Character Score bar chart">
-    <figcaption>Top 12 by Main Character Score = in-degree / (out-degree + 1). Higher = more self-centred.</figcaption>
-  </figure>
+  <div class="figure" id="fig-mcs">
+    <svg id="mcs-svg" style="width:100%;height:380px;display:block;background:#0d0d0d"></svg>
+    <figcaption>Top 15 by Main Character Score = in / (out + 1). Hover bars for details.</figcaption>
+  </div>
 
   <h2>Main Character Syndrome — the Support Character Curse</h2>
   <p>
@@ -204,10 +201,10 @@
     Zero links cross into the 277-character giant. They are quarantined — not forgotten, but invisible.
   </p>
 
-  <figure class="figure">
-    <img src="../assets/img/fig2_morituri.png" alt="The Morituri bubble">
-    <figcaption>The Morituri island. Red = Radian, their highest in-degree character. No edge in this drawing reaches the outside world.</figcaption>
-  </figure>
+  <div class="figure" id="fig-morituri">
+    <svg id="morituri-svg" style="width:100%;height:340px;display:block;background:#0d0d0d"></svg>
+    <figcaption>The Morituri bubble. Hover nodes to see details. Red = Radian (highest internal in-degree). No edge reaches the outside world.</figcaption>
+  </div>
 
   <h2>Who Invited You — the Forgotten 17</h2>
   <p>
@@ -277,6 +274,196 @@
 <div id="tooltip"></div>
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// ── Shared tooltip ────────────────────────────────────────────────────────────
+const tt = document.getElementById('tooltip');
+function showTT(e, html) {
+  tt.style.cssText = `display:block;left:${e.clientX+14}px;top:${e.clientY-10}px`;
+  tt.innerHTML = html;
+}
+function hideTT() { tt.style.display = 'none'; }
+
+// ── Chart colours ─────────────────────────────────────────────────────────────
+const QCOLORS = {
+  main_character: '#e63946', mutual_celebrity: '#9b5de5',
+  main_character_syndrome: '#457b9d', who_invited_you: '#2a2a2a',
+};
+const QLABELS = {
+  main_character:'Main Character', mutual_celebrity:'Mutual Celebrity',
+  main_character_syndrome:'Main Character Syndrome', who_invited_you:'Who Invited You',
+};
+
+fetch('../assets/data/charts.json').then(r => r.json()).then(data => {
+  drawQuadrant(data.quad);
+  drawMCS(data.mcs);
+  drawMorituri(data.morituri_nodes, data.morituri_edges);
+});
+
+// ── Fig 1: Quadrant scatter ───────────────────────────────────────────────────
+function drawQuadrant(data) {
+  const el  = document.getElementById('quad-svg');
+  const W   = el.clientWidth || 680, H = 420;
+  const m   = {top:30, right:20, bottom:50, left:55};
+  const iW  = W - m.left - m.right, iH = H - m.top - m.bottom;
+
+  const svg = d3.select('#quad-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g   = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+  const zoomG = g.append('g');
+
+  const x = d3.scaleLog().domain([0.8, 35]).range([0, iW]);
+  const y = d3.scaleLog().domain([0.8, 140]).range([iH, 0]);
+
+  // Gridlines
+  g.append('g').attr('class','grid').selectAll('line.v')
+    .data([1,2,5,10,20]).enter().append('line')
+    .attr('x1', d => x(d)).attr('x2', d => x(d))
+    .attr('y1', 0).attr('y2', iH)
+    .attr('stroke','#1e1e1e').attr('stroke-width', 1);
+  g.append('g').attr('class','grid').selectAll('line.h')
+    .data([1,2,5,10,20,50,100]).enter().append('line')
+    .attr('x1', 0).attr('x2', iW)
+    .attr('y1', d => y(d)).attr('y2', d => y(d))
+    .attr('stroke','#1e1e1e').attr('stroke-width', 1);
+
+  // Median lines
+  g.append('line').attr('x1',x(4)).attr('x2',x(4)).attr('y1',0).attr('y2',iH)
+    .attr('stroke','#333').attr('stroke-dasharray','4,3').attr('stroke-width',1.2);
+  g.append('line').attr('x1',0).attr('x2',iW).attr('y1',y(3)).attr('y2',y(3))
+    .attr('stroke','#333').attr('stroke-dasharray','4,3').attr('stroke-width',1.2);
+
+  // Quadrant labels
+  const ql = [{t:'Main Characters',      x:0.04, y:0.04, c:'#e63946'},
+               {t:'Mutual Celebrities',   x:0.60, y:0.04, c:'#9b5de5'},
+               {t:'Main Char. Syndrome',  x:0.60, y:0.82, c:'#457b9d'},
+               {t:'Who Invited You',      x:0.04, y:0.82, c:'#555'}];
+  ql.forEach(q => g.append('text')
+    .attr('x', iW*q.x).attr('y', iH*q.y)
+    .attr('fill', q.c).attr('font-size', 10).attr('font-weight', 700).attr('opacity',.7)
+    .text(q.t));
+
+  // Axes
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(5,'~s').tickSize(4))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+  g.append('g')
+    .call(d3.axisLeft(y).ticks(5,'~s').tickSize(4))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+
+  g.append('text').attr('x',iW/2).attr('y',iH+40).attr('text-anchor','middle')
+    .attr('fill','#666').attr('font-size',11).text('Out-degree (you link to others)');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-42)
+    .attr('text-anchor','middle').attr('fill','#666').attr('font-size',11).text('In-degree (others link to you)');
+
+  // Zoom
+  const zoom = d3.zoom().scaleExtent([0.5,12])
+    .on('zoom', e => { zoomG.attr('transform', e.transform); });
+  svg.call(zoom);
+
+  // Dots
+  const dots = zoomG.selectAll('circle').data(data).enter().append('circle')
+    .attr('cx', d => x(Math.max(0.9, d.out_deg)))
+    .attr('cy', d => y(Math.max(0.9, d.in_deg)))
+    .attr('r', 4.5)
+    .attr('fill', d => QCOLORS[d.quadrant])
+    .attr('opacity', 0.8)
+    .attr('stroke','#0d0d0d').attr('stroke-width', 0.5)
+    .on('mousemove', (e,d) => showTT(e,
+      `<strong>${d.name}</strong><br>in:${d.in_deg} · out:${d.out_deg}<br>${QLABELS[d.quadrant]}<br>MCS: ${d.mcs}`))
+    .on('mouseleave', hideTT);
+
+  // Label top characters
+  const labeled = data.filter(d => d.in_deg >= 30 || d.mcs >= 5);
+  zoomG.selectAll('text.lbl').data(labeled).enter().append('text')
+    .attr('x', d => x(Math.max(0.9, d.out_deg)) + 6)
+    .attr('y', d => y(Math.max(0.9, d.in_deg)) + 4)
+    .attr('fill','#ccc').attr('font-size', 8.5).attr('pointer-events','none')
+    .text(d => d.name.split('(')[0].trim());
+}
+
+// ── Fig 2: MCS bar chart ──────────────────────────────────────────────────────
+function drawMCS(data) {
+  const el = document.getElementById('mcs-svg');
+  const W  = el.clientWidth || 680, H = 380;
+  const m  = {top:20, right:110, bottom:30, left:160};
+  const iW = W - m.left - m.right, iH = H - m.top - m.bottom;
+
+  const svg = d3.select('#mcs-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g   = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  const x = d3.scaleLinear().domain([0, d3.max(data, d=>d.mcs)*1.08]).range([0, iW]);
+  const y = d3.scaleBand().domain(data.map(d=>d.name)).range([0, iH]).padding(0.25);
+
+  g.append('g').call(d3.axisLeft(y).tickSize(0))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('text').attr('fill','#bbb').attr('font-size',10));
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(5).tickSize(4))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',9));
+
+  const bars = g.selectAll('rect').data(data).enter().append('rect')
+    .attr('x', 0).attr('y', d => y(d.name))
+    .attr('height', y.bandwidth())
+    .attr('width', 0)
+    .attr('fill', '#e63946').attr('rx', 2).attr('opacity', 0.85)
+    .on('mousemove', (e,d) => showTT(e,
+      `<strong>${d.name}</strong><br>MCS: ${d.mcs}<br>in:${d.in_deg} · out:${d.out_deg}`))
+    .on('mouseleave', hideTT);
+
+  bars.transition().duration(700).delay((_,i)=>i*40)
+    .attr('width', d => x(d.mcs));
+
+  g.selectAll('text.val').data(data).enter().append('text')
+    .attr('x', d => x(d.mcs) + 5).attr('y', d => y(d.name) + y.bandwidth()/2 + 4)
+    .attr('fill','#888').attr('font-size', 9).text(d => `${d.mcs}  (in=${d.in_deg}, out=${d.out_deg})`);
+}
+
+// ── Fig 3: Morituri network ───────────────────────────────────────────────────
+function drawMorituri(nodes, links) {
+  const el = document.getElementById('morituri-svg');
+  const W  = el.clientWidth || 680, H = 340;
+
+  const svg = d3.select('#morituri-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g   = svg.append('g');
+  svg.call(d3.zoom().scaleExtent([0.5,5]).on('zoom', e => g.attr('transform', e.transform)));
+
+  const maxIn = d3.max(nodes, d => d.in_deg);
+
+  const sim = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d=>d.id).distance(70).strength(0.8))
+    .force('charge', d3.forceManyBody().strength(-180))
+    .force('center', d3.forceCenter(W/2, H/2));
+
+  const link = g.append('g').selectAll('line').data(links).enter().append('line')
+    .attr('stroke','#444').attr('stroke-width',1.5).attr('stroke-opacity',0.8);
+
+  const node = g.append('g').selectAll('circle').data(nodes).enter().append('circle')
+    .attr('r', d => 8 + d.in_deg * 4)
+    .attr('fill', d => d.in_deg === maxIn ? '#e63946' : '#457b9d')
+    .attr('stroke','#0d0d0d').attr('stroke-width',1.5)
+    .on('mousemove', (e,d) => showTT(e,
+      `<strong>${d.name}</strong><br>in:${d.in_deg} · out:${d.out_deg}${d.in_deg===maxIn?' 👑 their Spider-Man':''}`))
+    .on('mouseleave', hideTT)
+    .call(d3.drag()
+      .on('start',(e,d)=>{if(!e.active)sim.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag', (e,d)=>{d.fx=e.x;d.fy=e.y;})
+      .on('end',  (e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null;}));
+
+  const label = g.append('g').selectAll('text').data(nodes).enter().append('text')
+    .attr('text-anchor','middle').attr('fill','#e8e8e8')
+    .attr('font-size', 9).attr('font-weight','bold').attr('pointer-events','none')
+    .text(d => d.name);
+
+  sim.on('tick', () => {
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+        .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('cx',d=>d.x).attr('cy',d=>d.y);
+    label.attr('x',d=>d.x).attr('y',d=>d.y-14-d.in_deg*4);
+  });
+}
+</script>
 <script>
 const ARCHETYPE_COLORS = {
   main_character:          '#e63946',
