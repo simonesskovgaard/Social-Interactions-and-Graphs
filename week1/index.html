@@ -83,6 +83,36 @@
     #removed-list span { display:block; }
     #removed-list span.first { color:#e63946; }
 
+    /* Color mode toggle */
+    .mode-toggle { display:flex; gap:0; }
+    .mode-btn {
+      padding:.35rem .8rem;
+      font-size:.78rem;
+      font-weight:600;
+      border:1px solid #2a2a2a;
+      background:#161616;
+      color:#666;
+      cursor:pointer;
+      font-family:inherit;
+      transition: background .15s, color .15s;
+    }
+    .mode-btn:first-child { border-radius:4px 0 0 4px; }
+    .mode-btn:last-child  { border-radius:0 4px 4px 0; border-left:none; }
+    .mode-btn.active { background:#2a2a2a; color:#e8e8e8; }
+
+    /* Community legend */
+    #comm-legend {
+      display:none;
+      flex-wrap:wrap;
+      gap:.4rem .9rem;
+      margin-top:.6rem;
+      max-height:80px;
+      overflow-y:auto;
+    }
+    #comm-legend.visible { display:flex; }
+    .comm-item { display:flex; align-items:center; gap:.35rem; font-size:.75rem; color:#aaa; }
+    .comm-dot  { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
     /* Tooltip */
     #tooltip {
       position:fixed;
@@ -202,12 +232,19 @@
   <div id="interactive-wrap">
     <div id="interactive-header">
       <h3>Remove the top node — watch the network react</h3>
-      <div class="legend" style="margin:0;">
-        <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div>Main Character</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div>Mutual Celebrity</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div>MCS</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#444"></div>Who Invited You</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#f4a261"></div>Stranded</div>
+      <div style="display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;">
+        <div class="mode-toggle">
+          <button class="mode-btn active" onclick="setMode('archetype')">By Archetype</button>
+          <button class="mode-btn"        onclick="setMode('community')">By Community</button>
+        </div>
+        <div id="archetype-legend" class="legend" style="margin:0;">
+          <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div>Main Character</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div>Mutual Celebrity</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div>MCS</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#444"></div>Who Invited You</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f4a261"></div>Stranded</div>
+        </div>
+        <div id="comm-legend"></div>
       </div>
     </div>
     <div id="interactive-body">
@@ -241,12 +278,11 @@
 
 <script src="https://d3js.org/d3.v7.min.js"></script>
 <script>
-const COLORS = {
-  main_character:       '#e63946',
-  mutual_celebrity:     '#9b5de5',
+const ARCHETYPE_COLORS = {
+  main_character:          '#e63946',
+  mutual_celebrity:        '#9b5de5',
   main_character_syndrome: '#457b9d',
-  who_invited_you:      '#333333',
-  stranded:             '#f4a261',
+  who_invited_you:         '#2a2a2a',
 };
 const ARCH_LABELS = {
   main_character:          'Main Character',
@@ -254,12 +290,20 @@ const ARCH_LABELS = {
   main_character_syndrome: 'Main Character Syndrome',
   who_invited_you:         'Who Invited You',
 };
+const STRANDED = '#f4a261';
+const COMM_PALETTE = [
+  '#e63946','#2a9d8f','#e9c46a','#264653','#8ecae6',
+  '#457b9d','#e76f51','#06d6a0','#ffd166','#ef476f',
+  '#118ab2','#073b4c','#9b5de5','#f15bb5','#fee440',
+  '#00bbf9','#00f5d4','#fb5607','#ff006e','#8338ec',
+  '#3a86ff','#ffbe0b','#a8dadc','#f4a261','#b7e4c7',
+];
 
-let allNodes = [], allLinks = [];
-let removedIds = new Set();
-let simulation, svg, linkSel, nodeSel;
+let allNodes = [], allLinks = [], numCommunities = 25;
+let removedIds = new Set(), prevStranded = new Set();
 let giantIds = new Set();
-
+let colorMode = 'archetype';
+let simulation, svg, g, linkSel, nodeSel;
 const tooltip = document.getElementById('tooltip');
 
 fetch('../assets/data/network.json')
@@ -267,34 +311,81 @@ fetch('../assets/data/network.json')
   .then(data => {
     allNodes = data.nodes.map(d => ({...d}));
     allLinks = data.links.map(d => ({source: d.source, target: d.target}));
+    numCommunities = data.num_communities || 25;
+    buildCommLegend();
     initViz();
   });
 
+function nodeR(d) { return Math.max(3, Math.min(14, 3 + d.in_deg * 0.25)); }
+
+function baseColor(d) {
+  return colorMode === 'community'
+    ? COMM_PALETTE[d.community % COMM_PALETTE.length]
+    : ARCHETYPE_COLORS[d.quadrant];
+}
+function nodeColor(d) {
+  return (giantIds.size && !giantIds.has(d.id)) ? STRANDED : baseColor(d);
+}
+
+function getActive() {
+  const nodes = allNodes.filter(n => !removedIds.has(n.id));
+  const ids   = new Set(nodes.map(n => n.id));
+  const links = allLinks.filter(l => {
+    const s = l.source.id ?? l.source, t = l.target.id ?? l.target;
+    return ids.has(s) && ids.has(t);
+  });
+  return {nodes, links};
+}
+
+function findGiant(nodes, links) {
+  const adj = Object.fromEntries(nodes.map(n => [n.id, []]));
+  links.forEach(l => {
+    const s = l.source.id ?? l.source, t = l.target.id ?? l.target;
+    if (adj[s]) adj[s].push(t);
+    if (adj[t]) adj[t].push(s);
+  });
+  const visited = new Set();
+  let biggest = [];
+  nodes.forEach(n => {
+    if (visited.has(n.id)) return;
+    const comp = [], q = [n.id];
+    visited.add(n.id);
+    while (q.length) {
+      const cur = q.shift(); comp.push(cur);
+      (adj[cur]||[]).forEach(nb => { if (!visited.has(nb)) { visited.add(nb); q.push(nb); }});
+    }
+    if (comp.length > biggest.length) biggest = comp;
+  });
+  return new Set(biggest);
+}
+
 function initViz() {
   const wrap = document.getElementById('network-svg');
-  const W = wrap.parentElement.clientWidth - 220;
-  const H = 480;
+  const W = Math.max(400, wrap.parentElement.clientWidth - 220);
+  const H = 500;
   wrap.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  wrap.setAttribute('width', W);
+  wrap.setAttribute('width',  W);
   wrap.setAttribute('height', H);
 
   svg = d3.select('#network-svg');
-  svg.append('defs').append('marker')
-    .attr('id','arrow').attr('viewBox','0 -4 8 8')
-    .attr('refX',12).attr('markerWidth',6).attr('markerHeight',6)
-    .attr('orient','auto')
-    .append('path').attr('d','M0,-4L8,0L0,4').attr('fill','#333');
 
-  const g = svg.append('g').attr('id','main-g');
-  svg.call(d3.zoom().scaleExtent([0.3,5]).on('zoom', e => g.attr('transform', e.transform)));
+  const defs = svg.append('defs');
+  const filter = defs.append('filter').attr('id','glow').attr('x','-50%').attr('y','-50%').attr('width','200%').attr('height','200%');
+  filter.append('feGaussianBlur').attr('in','SourceGraphic').attr('stdDeviation','4').attr('result','blur');
+  const merge = filter.append('feMerge');
+  merge.append('feMergeNode').attr('in','blur');
+  merge.append('feMergeNode').attr('in','SourceGraphic');
 
-  linkSel = g.append('g').attr('id','links');
-  nodeSel = g.append('g').attr('id','nodes');
+  g = svg.append('g');
+  svg.call(d3.zoom().scaleExtent([0.2,6]).on('zoom', e => g.attr('transform', e.transform)));
+
+  linkSel = g.append('g');
+  nodeSel = g.append('g');
 
   simulation = d3.forceSimulation()
-    .force('link', d3.forceLink().id(d => d.id).distance(28).strength(0.4))
-    .force('charge', d3.forceManyBody().strength(-55))
-    .force('center', d3.forceCenter(W/2, H/2))
+    .force('link',    d3.forceLink().id(d => d.id).distance(30).strength(0.5))
+    .force('charge',  d3.forceManyBody().strength(-60))
+    .force('center',  d3.forceCenter(W/2, H/2))
     .force('collide', d3.forceCollide().radius(d => nodeR(d) + 2))
     .on('tick', ticked);
 
@@ -302,59 +393,61 @@ function initViz() {
   updatePanel();
 }
 
-function nodeR(d) { return Math.max(3, Math.min(14, 3 + d.in_deg * 0.25)); }
-
-function nodeColor(d) {
-  if (!giantIds.size) return COLORS[d.quadrant];
-  if (!giantIds.has(d.id)) return COLORS.stranded;
-  return COLORS[d.quadrant];
-}
-
 function rebind() {
-  const activeNodes = allNodes.filter(n => !removedIds.has(n.id));
-  const activeNodeIds = new Set(activeNodes.map(n => n.id));
-  const activeLinks = allLinks.filter(l => activeNodeIds.has(l.source.id ?? l.source) && activeNodeIds.has(l.target.id ?? l.target));
+  const {nodes, links} = getActive();
+  giantIds = findGiant(nodes, links);
 
-  giantIds = findGiant(activeNodes, activeLinks);
+  const nowStranded  = new Set(nodes.filter(n => !giantIds.has(n.id)).map(n => n.id));
+  const newlyStranded = [...nowStranded].filter(id => !prevStranded.has(id));
+  prevStranded = nowStranded;
 
   // Links
-  const ldata = linkSel.selectAll('line').data(activeLinks, d => `${d.source.id??d.source}→${d.target.id??d.target}`);
-  ldata.exit().remove();
-  ldata.enter().append('line')
-    .attr('stroke', '#222')
-    .attr('stroke-width', 0.8)
-    .attr('stroke-opacity', 0.6);
+  const lsel = linkSel.selectAll('line')
+    .data(links, l => `${l.source.id??l.source}|${l.target.id??l.target}`);
+  lsel.exit().remove();
+  lsel.enter().append('line')
+    .attr('stroke','#1e1e1e').attr('stroke-width', 0.8).attr('stroke-opacity', 0.7);
 
   // Nodes
-  const ndata = nodeSel.selectAll('circle').data(activeNodes, d => d.id);
-  ndata.exit().transition().duration(300).attr('r', 0).remove();
+  const nsel = nodeSel.selectAll('circle').data(nodes, d => d.id);
 
-  const entered = ndata.enter().append('circle')
+  nsel.exit().transition().duration(400)
+    .attr('r', 0).attr('opacity', 0).remove();
+
+  nsel.enter().append('circle')
     .attr('r', 0)
-    .attr('fill', d => COLORS[d.quadrant])
-    .attr('stroke', '#0d0d0d')
-    .attr('stroke-width', 0.8)
+    .attr('fill', d => baseColor(d))
+    .attr('stroke','#0d0d0d').attr('stroke-width', 0.8)
     .call(d3.drag()
       .on('start', (e,d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
       .on('drag',  (e,d) => { d.fx=e.x; d.fy=e.y; })
       .on('end',   (e,d) => { if (!e.active) simulation.alphaTarget(0); d.fx=null; d.fy=null; }))
     .on('mousemove', (e,d) => {
-      tooltip.style.display = 'block';
-      tooltip.style.left = (e.clientX+12)+'px';
-      tooltip.style.top  = (e.clientY-8)+'px';
-      tooltip.innerHTML = `<strong>${d.name}</strong><br>in: ${d.in_deg} · out: ${d.out_deg}<br>${ARCH_LABELS[d.quadrant]}`;
+      tooltip.style.cssText = `display:block;left:${e.clientX+14}px;top:${e.clientY-10}px`;
+      tooltip.innerHTML = `<strong>${d.name}</strong><br>in:${d.in_deg} · out:${d.out_deg}<br>${ARCH_LABELS[d.quadrant]}<br><span style="color:#888">Community ${d.community}</span>`;
     })
-    .on('mouseleave', () => tooltip.style.display='none');
+    .on('mouseleave', () => tooltip.style.display = 'none')
+    .transition().duration(350).attr('r', d => nodeR(d));
 
-  entered.transition().duration(300).attr('r', d => nodeR(d));
+  // Recolor all nodes smoothly
+  nodeSel.selectAll('circle').transition().duration(450)
+    .attr('fill',         d => nodeColor(d))
+    .attr('stroke',       d => nowStranded.has(d.id) ? STRANDED : '#0d0d0d')
+    .attr('stroke-width', d => nowStranded.has(d.id) ? 2 : 0.8)
+    .attr('filter',       d => nowStranded.has(d.id) ? 'url(#glow)' : null);
 
-  // Update colors on existing nodes
-  nodeSel.selectAll('circle').transition().duration(400)
-    .attr('fill', d => nodeColor(d));
+  // Pulse-flash newly stranded nodes
+  if (newlyStranded.length) {
+    nodeSel.selectAll('circle')
+      .filter(d => newlyStranded.includes(d.id))
+      .raise()
+      .transition().duration(180).attr('r', d => nodeR(d) * 2.5)
+      .transition().duration(320).attr('r', d => nodeR(d));
+  }
 
-  simulation.nodes(activeNodes);
-  simulation.force('link').links(activeLinks);
-  simulation.alpha(0.4).restart();
+  simulation.nodes(nodes);
+  simulation.force('link').links(links);
+  simulation.alpha(0.5).restart();
 }
 
 function ticked() {
@@ -365,46 +458,19 @@ function ticked() {
     .attr('cx', d => d.x).attr('cy', d => d.y);
 }
 
-function findGiant(nodes, links) {
-  const adj = {};
-  nodes.forEach(n => adj[n.id] = []);
-  links.forEach(l => {
-    const s = l.source.id ?? l.source;
-    const t = l.target.id ?? l.target;
-    if (adj[s] !== undefined) adj[s].push(t);
-    if (adj[t] !== undefined) adj[t].push(s);
-  });
-  const visited = new Set();
-  let biggest = [];
-  nodes.forEach(n => {
-    if (visited.has(n.id)) return;
-    const comp = [], q = [n.id];
-    visited.add(n.id);
-    while (q.length) {
-      const cur = q.shift();
-      comp.push(cur);
-      (adj[cur]||[]).forEach(nb => { if (!visited.has(nb)) { visited.add(nb); q.push(nb); } });
-    }
-    if (comp.length > biggest.length) biggest = comp;
-  });
-  return new Set(biggest);
-}
-
 function nextTop() {
-  return allNodes
-    .filter(n => !removedIds.has(n.id))
-    .sort((a,b) => b.in_deg - a.in_deg)[0];
+  return allNodes.filter(n => !removedIds.has(n.id)).sort((a,b) => b.in_deg - a.in_deg)[0];
 }
 
 function updatePanel() {
+  const {nodes} = getActive();
+  const stranded = nodes.filter(n => !giantIds.has(n.id)).length;
   const top = nextTop();
-  const active = allNodes.filter(n => !removedIds.has(n.id));
-  const stranded = active.filter(n => !giantIds.has(n.id)).length;
 
-  document.getElementById('s-nodes').textContent   = active.length;
-  document.getElementById('s-giant').textContent   = giantIds.size;
+  document.getElementById('s-nodes').textContent    = nodes.length;
+  document.getElementById('s-giant').textContent    = giantIds.size;
   document.getElementById('s-stranded').textContent = stranded;
-  document.getElementById('s-removed').textContent = removedIds.size;
+  document.getElementById('s-removed').textContent  = removedIds.size;
 
   if (top) {
     document.getElementById('next-name').textContent  = top.name;
@@ -413,19 +479,16 @@ function updatePanel() {
     document.getElementById('btn-remove').disabled = false;
   } else {
     document.getElementById('next-name').textContent = 'All removed';
-    document.getElementById('btn-remove').disabled = true;
+    document.getElementById('btn-remove').disabled   = true;
   }
 
   const list = document.getElementById('removed-list');
-  if (removedIds.size === 0) {
-    list.innerHTML = '<span style="color:#444">none yet</span>';
-  } else {
-    const items = [...removedIds].reverse().map((id, i) => {
-      const n = allNodes.find(x => x.id === id);
-      return `<span class="${i===0?'first':''}">${n ? n.name : id}</span>`;
-    }).join('');
-    list.innerHTML = items;
-  }
+  list.innerHTML = removedIds.size === 0
+    ? '<span style="color:#444">none yet</span>'
+    : [...removedIds].reverse().map((id,i) => {
+        const n = allNodes.find(x => x.id === id);
+        return `<span class="${i===0?'first':''}">${n?.name ?? id}</span>`;
+      }).join('');
 }
 
 function removeTop() {
@@ -438,9 +501,27 @@ function removeTop() {
 
 function resetNetwork() {
   removedIds.clear();
+  prevStranded.clear();
   giantIds = new Set();
   rebind();
   updatePanel();
+}
+
+function setMode(mode) {
+  colorMode = mode;
+  document.querySelectorAll('.mode-btn').forEach((b,i) =>
+    b.classList.toggle('active', (i===0) === (mode==='archetype')));
+  document.getElementById('archetype-legend').style.display = mode==='archetype' ? '' : 'none';
+  document.getElementById('comm-legend').classList.toggle('visible', mode==='community');
+  nodeSel.selectAll('circle').transition().duration(400).attr('fill', d => nodeColor(d));
+}
+
+function buildCommLegend() {
+  const el = document.getElementById('comm-legend');
+  const shown = Math.min(8, numCommunities);
+  el.innerHTML = Array.from({length: shown}, (_,i) =>
+    `<div class="comm-item"><div class="comm-dot" style="background:${COMM_PALETTE[i]}"></div>Comm ${i}</div>`
+  ).join('') + (numCommunities > shown ? `<div class="comm-item" style="color:#555">+${numCommunities-shown} more</div>` : '');
 }
 </script>
 
