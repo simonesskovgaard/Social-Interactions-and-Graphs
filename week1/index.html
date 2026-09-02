@@ -34,7 +34,7 @@
     #interactive-body { display:flex; }
 
     /* SVG canvas */
-    #network-svg { flex:1; min-height:480px; display:block; background:#0d0d0d; }
+    #network-svg { flex:1; min-height:600px; display:block; background:#0d0d0d; }
 
     /* Control panel */
     #ctrl {
@@ -509,11 +509,11 @@ const ARCH_LABELS = {
 };
 const STRANDED = '#f4a261';
 const COMM_PALETTE = [
-  '#e63946','#2a9d8f','#e9c46a','#264653','#8ecae6',
-  '#457b9d','#e76f51','#06d6a0','#ffd166','#ef476f',
-  '#118ab2','#073b4c','#9b5de5','#f15bb5','#fee440',
-  '#00bbf9','#00f5d4','#fb5607','#ff006e','#8338ec',
-  '#3a86ff','#ffbe0b','#a8dadc','#f4a261','#b7e4c7',
+  '#e63946','#2a9d8f','#e9c46a','#8ecae6','#f4a261',
+  '#e76f51','#06d6a0','#ffd166','#ef476f','#118ab2',
+  '#9b5de5','#f15bb5','#fee440','#00bbf9','#00f5d4',
+  '#fb5607','#ff006e','#8338ec','#3a86ff','#ffbe0b',
+  '#a8dadc','#b7e4c7','#c77dff','#48cae4','#ff9f1c',
 ];
 
 let allNodes = [], allLinks = [], numCommunities = 25;
@@ -579,7 +579,7 @@ function findGiant(nodes, links) {
 function initViz() {
   const wrap = document.getElementById('network-svg');
   const W = Math.max(400, wrap.parentElement.clientWidth - 220);
-  const H = 500;
+  const H = 620;
   wrap.setAttribute('viewBox', `0 0 ${W} ${H}`);
   wrap.setAttribute('width',  W);
   wrap.setAttribute('height', H);
@@ -600,10 +600,10 @@ function initViz() {
   nodeSel = g.append('g');
 
   simulation = d3.forceSimulation()
-    .force('link',    d3.forceLink().id(d => d.id).distance(30).strength(0.5))
-    .force('charge',  d3.forceManyBody().strength(-60))
+    .force('link',    d3.forceLink().id(d => d.id).distance(50).strength(0.3))
+    .force('charge',  d3.forceManyBody().strength(-130))
     .force('center',  d3.forceCenter(W/2, H/2))
-    .force('collide', d3.forceCollide().radius(d => nodeR(d) + 2))
+    .force('collide', d3.forceCollide().radius(d => nodeR(d) + 3))
     .on('tick', ticked);
 
   rebind();
@@ -623,7 +623,7 @@ function rebind() {
     .data(links, l => `${l.source.id??l.source}|${l.target.id??l.target}`);
   lsel.exit().remove();
   lsel.enter().append('line')
-    .attr('stroke','#333').attr('stroke-width', 0.7).attr('stroke-opacity', 0.35);
+    .attr('stroke','#555').attr('stroke-width', 0.5).attr('stroke-opacity', 0.15);
 
   // Nodes — use enter+merge so ONE transition covers both r and fill,
   // avoiding the D3 transition-interrupt bug (two transitions on same nodes
