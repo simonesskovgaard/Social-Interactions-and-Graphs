@@ -103,15 +103,12 @@
     /* Community legend */
     #comm-legend {
       display:none;
-      flex-wrap:wrap;
-      gap:.4rem .9rem;
-      margin-top:.6rem;
-      max-height:80px;
-      overflow-y:auto;
+      align-items:center;
+      gap:.3rem;
+      margin-top:.5rem;
     }
     #comm-legend.visible { display:flex; }
-    .comm-item { display:flex; align-items:center; gap:.35rem; font-size:.75rem; color:#aaa; }
-    .comm-dot  { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .comm-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 
     /* Tooltip */
     #tooltip {
@@ -768,10 +765,11 @@ function setMode(mode) {
 
 function buildCommLegend() {
   const el = document.getElementById('comm-legend');
-  const shown = Math.min(8, numCommunities);
-  el.innerHTML = Array.from({length: shown}, (_,i) =>
-    `<div class="comm-item"><div class="comm-dot" style="background:${COMM_PALETTE[i]}"></div>Comm ${i}</div>`
-  ).join('') + (numCommunities > shown ? `<div class="comm-item" style="color:#555">+${numCommunities-shown} more</div>` : '');
+  el.innerHTML =
+    COMM_PALETTE.slice(0, numCommunities).map(c =>
+      `<div class="comm-dot" style="background:${c}"></div>`
+    ).join('') +
+    `<span style="color:#555;font-size:.72rem;margin-left:.3rem">${numCommunities} communities</span>`;
 }
 </script>
 
