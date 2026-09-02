@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Week 1 — Networks & Degree Distributions</title>
+  <title>Week 1 — Main Character Syndrome</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
@@ -21,125 +21,170 @@
 <article class="post-wrap">
 
   <p class="post-meta">Week 01 · 2 September 2026</p>
-  <h1>Who holds the Marvel universe together?</h1>
+  <h1>Main Character Syndrome in the Marvel Universe</h1>
   <p class="post-intro">
-    We loaded 303 Marvel superheroes and every Wikipedia link between them.
-    Popularity isn't the whole story — some characters matter because of where they sit, not how famous they are.
+    Every character has two numbers: how many others link to them, and how many others they link to.
+    Plot those two numbers and a hidden hierarchy appears — stars, glue, pillars, and ghosts.
   </p>
 
-  <h2>The network</h2>
+  <h2>The question</h2>
   <p>
-    The dataset is a directed graph: an edge A → B exists when A's Wikipedia article links to B's.
-    We loaded all 303 nodes before adding edges so that isolated characters — those with no links at all — aren't silently dropped.
+    The dataset is a directed Wikipedia link network: 303 Marvel superheroes, with an edge A&nbsp;&rarr;&nbsp;B
+    whenever A's Wikipedia article links to B. We loaded all 303 nodes before adding edges —
+    otherwise the 17 characters with zero connections would silently disappear.
+  </p>
+  <p>
+    The obvious question is: who matters most? The obvious answer is in-degree —
+    Spider-Man has 106, Hulk has 64, Wolverine has 60. But that's only half the story.
+    Every character has <em>two</em> numbers, and the relationship between them is where things get interesting.
+  </p>
+
+  <h2>Two numbers, four archetypes</h2>
+  <p>
+    <strong>In-degree</strong> measures how many others link to you — your fame, your gravity,
+    how much the universe orbits around you.<br>
+    <strong>Out-degree</strong> measures how many others you link to — your social reach,
+    how embedded you are in everyone else's story.
+  </p>
+  <p>
+    Split on the median (in&nbsp;&ge;&nbsp;3, out&nbsp;&ge;&nbsp;4) and four archetypes emerge:
   </p>
 
   <table>
     <thead>
-      <tr><th>Metric</th><th>Value</th></tr>
+      <tr><th></th><th>Low out-degree</th><th>High out-degree</th></tr>
     </thead>
     <tbody>
-      <tr><td>Characters (nodes)</td><td class="highlight">303</td></tr>
-      <tr><td>Directed links (edges)</td><td class="highlight">1,784</td></tr>
-      <tr><td>Undirected pairs</td><td>1,434</td></tr>
-      <tr><td>Average undirected degree</td><td>9.47</td></tr>
-      <tr><td>Giant component</td><td>277 nodes (91%)</td></tr>
-      <tr><td>Isolated characters</td><td>17</td></tr>
+      <tr>
+        <td><strong>High in-degree</strong></td>
+        <td>THE STARS — 34 characters<br><small>Everyone talks about you. You barely talk back.</small></td>
+        <td>THE PILLARS — 127 characters<br><small>Famous and connected. The true hubs.</small></td>
+      </tr>
+      <tr>
+        <td><strong>Low in-degree</strong></td>
+        <td>THE SHADOWS — 94 characters<br><small>You barely exist in this universe.</small></td>
+        <td>THE GLUE — 48 characters<br><small>You connect everyone. Nobody notices.</small></td>
+      </tr>
     </tbody>
   </table>
 
-  <p>
-    The directed count (1,784) is higher than the undirected count (1,434) because 350 directed edges are
-    mutual — both A→B and B→A exist, but they collapse into a single undirected pair.
-  </p>
-
-  <h2>Degree distributions</h2>
-  <p>
-    We plotted in-degree and out-degree on log-log axes. In-degree stretches into a long tail
-    that follows a power law — a straight line on log-log axes. Out-degree doesn't.
-  </p>
-
   <figure class="figure">
-    <img src="../assets/img/fig1_distributions.png" alt="In-degree and out-degree distributions on log-log axes">
-    <figcaption>In-degree (left) follows a power law. Out-degree (right) drops off quickly — it's bounded by how many characters fit in one comic.</figcaption>
+    <img src="../assets/img/fig1_quadrant.png" alt="Quadrant scatter plot of all 303 Marvel characters">
+    <figcaption>
+      All 303 characters plotted on log-log axes. Dashed lines mark the median in-degree (3) and out-degree (4).
+      The four quadrants each tell a different story about how a character relates to the rest of the Marvel universe.
+    </figcaption>
   </figure>
 
+  <h2>The Stars — Main Character Syndrome in its purest form</h2>
   <p>
-    The asymmetry makes sense once you think about who controls each edge type.
-    In-degree is conferred by <em>others</em> — anyone writing a Marvel article can link to Spider-Man.
-    Out-degree is bounded by the length of a single article.
-    Popularity compounds; article length doesn't.
+    These 34 characters have high in-degree but low out-degree. The universe talks about them constantly,
+    but their own Wikipedia articles barely mention anyone else. They are the gravitational centres —
+    everything orbits around them, but they don't orbit back.
+  </p>
+  <p>
+    The extreme case is <strong>Ms. Marvel</strong>: 11 characters link to her, but her own article
+    links to just 1. She has a Main Character Score (in / (out + 1)) of 5.5 —
+    the universe discusses her far more than she discusses the universe.
+  </p>
+
+  <h2>The Glue — the unsung heroes</h2>
+  <p>
+    These 48 characters link to many others but are rarely linked back. They appear in everyone's story
+    but never get top billing. The most extreme examples are genuinely surprising:
   </p>
 
   <table>
     <thead>
-      <tr><th>Rank</th><th>Character</th><th>In-degree</th></tr>
+      <tr><th>Character</th><th>In-degree</th><th>Out-degree</th><th>Glue score</th></tr>
     </thead>
     <tbody>
-      <tr><td>1</td><td class="highlight">Spider-Man</td><td>106</td></tr>
-      <tr><td>2</td><td>Hulk</td><td>64</td></tr>
-      <tr><td>3</td><td>Wolverine</td><td>60</td></tr>
-      <tr><td>4</td><td>Doctor Strange</td><td>50</td></tr>
-      <tr><td>5</td><td>Deadpool</td><td>33</td></tr>
+      <tr><td class="highlight">Shamrock</td><td>0</td><td>8</td><td>8.0</td></tr>
+      <tr><td class="highlight">Isaiah Bradley</td><td>0</td><td>7</td><td>7.0</td></tr>
+      <tr><td>Spider-Bitch (Ashley Barton)</td><td>2</td><td>15</td><td>5.0</td></tr>
+      <tr><td>Brian Braddock</td><td>1</td><td>11</td><td>5.5</td></tr>
+      <tr><td>Frankenstein's Monster</td><td>2</td><td>11</td><td>3.7</td></tr>
     </tbody>
   </table>
 
-  <h2>The network drawing</h2>
   <p>
-    We drew the giant component (277 nodes) using a force-directed layout.
-    Node size and colour both encode in-degree — darker red means more links pointing in.
-    The five most-linked characters are labelled.
+    <strong>Shamrock</strong> and <strong>Isaiah Bradley</strong> have zero in-degree.
+    Their Wikipedia articles reference 8 and 7 other Marvel characters respectively — but not a single
+    character's article ever links back to them. They connect others to the network while being completely
+    invisible themselves. This is the inverse of Main Character Syndrome: the <em>Support Character Curse</em>.
+  </p>
+
+  <h2>The Main Character Score</h2>
+  <p>
+    We defined Main Character Score as in-degree / (out-degree + 1). A high score means you receive
+    far more attention than you give — the purest expression of Main Character Syndrome.
   </p>
 
   <figure class="figure">
-    <img src="../assets/img/fig2_network.png" alt="Force-directed drawing of the Marvel giant component">
-    <figcaption>Giant component (277/303 characters). The remaining 26 sit in a 9-node island and 17 isolates. Node colour: red = high in-degree, blue = low.</figcaption>
+    <img src="../assets/img/fig3_mcs.png" alt="Main Character Score bar chart for top 12 characters">
+    <figcaption>
+      Top 12 characters by Main Character Score. Spider-Man scores 10.6 — for every link he sends out,
+      roughly 10 other characters link back to him.
+    </figcaption>
   </figure>
 
   <div class="callout">
-    <strong>The island:</strong> Nine characters form a completely separate cluster — Backhand, Toxyn, Blackthorn, Scaredycat, Shear, Radian, Vyking, Snapdragon, and Scatterbrain (all Morituri characters). They reference each other but nobody in the main Marvel universe links to them.
+    <strong>The surprise:</strong> Spider-Man is technically a Pillar (high in, high out) — his out-degree is 9,
+    above the median of 4. But his MCS of 10.6 is by far the highest in the network.
+    The gap between 106 in and 9 out tells the real story.
   </div>
 
-  <h2>The surprising finding: bridges vs celebrities</h2>
+  <h2>The Morituri Bubble — a parallel universe</h2>
   <p>
-    Betweenness centrality measures how often a node sits on the shortest path between two other nodes.
-    It captures structural importance — not popularity, but <em>bridging power</em>.
-    We plotted betweenness against in-degree for the top 20 bridge characters.
+    Nine characters form a completely separate connected component, with zero links to or from
+    the 277-character giant component. They are all from <em>The Morituri</em>, a 1980s Marvel storyline
+    about heroes who gain superpowers at the cost of their own lives. Their Wikipedia articles
+    reference each other extensively — but the wider Marvel Wikipedia ecosystem has completely ignored them.
+  </p>
+  <p>
+    Inside their bubble, <strong>Radian</strong> is their Spider-Man — the most-linked character
+    with an internal in-degree of 4. He is unknown to the 277 characters in the main universe.
+    He has never been linked to. He doesn't exist to them.
   </p>
 
   <figure class="figure">
-    <img src="../assets/img/fig3_bridges.png" alt="Betweenness centrality vs in-degree">
-    <figcaption>Top 20 characters by betweenness. High in-degree characters cluster toward the right. Hercules sits high on the y-axis with only 19 in-degree links — a genuine structural bridge, not just a celebrity.</figcaption>
+    <img src="../assets/img/fig2_morituri.png" alt="Network drawing of the 9-node Morituri island">
+    <figcaption>
+      The Morituri bubble. Red node = Radian, their highest in-degree character.
+      Every edge in this drawing stays inside the bubble — none cross into the main Marvel network.
+    </figcaption>
   </figure>
 
+  <h2>The Forgotten 17 — not even a quadrant</h2>
   <p>
-    <strong>Hercules is the most surprising result.</strong> He has just 19 in-degree links — well outside the top 20 by popularity — but ranks 2nd by betweenness. He connects parts of the network that would otherwise be far apart. Remove him and paths get longer; remove Spider-Man and the network barely changes structurally.
+    Seventeen characters have degree zero: no links in, no links out. They exist in the Wikipedia
+    category "Marvel Comics superheroes" but are never mentioned by name in any other superhero's article,
+    and their own articles mention no one else. They don't belong to any quadrant.
+  </p>
+  <p>
+    The most striking case is <strong>Baymax</strong> — the robot companion from Big Hero 6,
+    a Disney movie with over $650 million at the box office. His Wikipedia page exists,
+    but it apparently links to no other Marvel superhero, and no Marvel superhero's page links to him.
+    In network terms, he is as disconnected as <strong>Super Rabbit</strong> (a 1943 Bugs Bunny parody character).
   </p>
 
-  <table>
-    <thead>
-      <tr><th>Rank</th><th>Character</th><th>Betweenness</th><th>In-degree</th></tr>
-    </thead>
-    <tbody>
-      <tr><td>1</td><td>Wolverine</td><td>0.0655</td><td>60</td></tr>
-      <tr><td>2</td><td class="highlight">Hercules</td><td>0.0610</td><td class="highlight">19</td></tr>
-      <tr><td>3</td><td>Spider-Man</td><td>0.0572</td><td>106</td></tr>
-      <tr><td>4</td><td>Deadpool</td><td>0.0570</td><td>33</td></tr>
-      <tr><td>5</td><td>Doctor Strange</td><td>0.0564</td><td>50</td></tr>
-    </tbody>
-  </table>
-
-  <h2>What we asked the LLM, and what we verified</h2>
+  <h2>What we asked, what we built, what surprised us</h2>
   <p>
-    We used Claude Code to build the entire analysis pipeline: loading the graph, computing distributions,
-    drawing figures, and generating this site. The agent was fast and mostly correct, but we caught one bug ourselves:
-    it initially loaded the edge file without <code>header=None</code>, causing the first data row to be treated as column names and losing one edge.
-    Always verify node and edge counts against the known values (303 nodes, 1,784 edges).
+    We asked Claude Code to design the analysis from scratch: load the data, classify characters into
+    quadrant archetypes, compute the Main Character Score, and build this site.
+    The agent suggested the quadrant frame unprompted — we just told it the in-degree/out-degree
+    asymmetry was interesting.
   </p>
-
   <p>
-    The betweenness calculation and the Hercules finding were genuinely surprising — we wouldn't have looked for it
-    without the agent suggesting it as an interesting angle. That's the right way to use the tool:
-    let it surface candidates, then think about whether the result actually makes sense.
+    The Shamrock finding genuinely surprised us. A character can be <em>active</em> in the network
+    (linking to 8 others) while being completely <em>invisible</em> (zero in-degree).
+    This is only possible in a directed network — an undirected analysis would have given her degree 8
+    and hidden the asymmetry entirely.
+  </p>
+  <p>
+    The Morituri we expected to be boring background characters. Finding that they form a
+    self-contained parallel universe with its own internal hierarchy — Radian as their local celebrity,
+    completely unknown outside — felt like discovering a hidden room.
   </p>
 
 </article>
