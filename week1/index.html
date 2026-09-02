@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Week 1 — Networks & Degree Distributions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<nav>
+  <a href="../index.html" class="nav-logo">Network Lab</a>
+  <div class="nav-links">
+    <a href="../index.html">← All weeks</a>
+    <a href="https://github.com/simonesskovgaard/Social-Interactions-and-Graphs" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<article class="post-wrap">
+
+  <p class="post-meta">Week 01 · 2 September 2026</p>
+  <h1>Who holds the Marvel universe together?</h1>
+  <p class="post-intro">
+    We loaded 303 Marvel superheroes and every Wikipedia link between them.
+    Popularity isn't the whole story — some characters matter because of where they sit, not how famous they are.
+  </p>
+
+  <h2>The network</h2>
+  <p>
+    The dataset is a directed graph: an edge A → B exists when A's Wikipedia article links to B's.
+    We loaded all 303 nodes before adding edges so that isolated characters — those with no links at all — aren't silently dropped.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Metric</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Characters (nodes)</td><td class="highlight">303</td></tr>
+      <tr><td>Directed links (edges)</td><td class="highlight">1,784</td></tr>
+      <tr><td>Undirected pairs</td><td>1,434</td></tr>
+      <tr><td>Average undirected degree</td><td>9.47</td></tr>
+      <tr><td>Giant component</td><td>277 nodes (91%)</td></tr>
+      <tr><td>Isolated characters</td><td>17</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    The directed count (1,784) is higher than the undirected count (1,434) because 350 directed edges are
+    mutual — both A→B and B→A exist, but they collapse into a single undirected pair.
+  </p>
+
+  <h2>Degree distributions</h2>
+  <p>
+    We plotted in-degree and out-degree on log-log axes. In-degree stretches into a long tail
+    that follows a power law — a straight line on log-log axes. Out-degree doesn't.
+  </p>
+
+  <figure class="figure">
+    <img src="../assets/img/fig1_distributions.png" alt="In-degree and out-degree distributions on log-log axes">
+    <figcaption>In-degree (left) follows a power law. Out-degree (right) drops off quickly — it's bounded by how many characters fit in one comic.</figcaption>
+  </figure>
+
+  <p>
+    The asymmetry makes sense once you think about who controls each edge type.
+    In-degree is conferred by <em>others</em> — anyone writing a Marvel article can link to Spider-Man.
+    Out-degree is bounded by the length of a single article.
+    Popularity compounds; article length doesn't.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Rank</th><th>Character</th><th>In-degree</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td class="highlight">Spider-Man</td><td>106</td></tr>
+      <tr><td>2</td><td>Hulk</td><td>64</td></tr>
+      <tr><td>3</td><td>Wolverine</td><td>60</td></tr>
+      <tr><td>4</td><td>Doctor Strange</td><td>50</td></tr>
+      <tr><td>5</td><td>Deadpool</td><td>33</td></tr>
+    </tbody>
+  </table>
+
+  <h2>The network drawing</h2>
+  <p>
+    We drew the giant component (277 nodes) using a force-directed layout.
+    Node size and colour both encode in-degree — darker red means more links pointing in.
+    The five most-linked characters are labelled.
+  </p>
+
+  <figure class="figure">
+    <img src="../assets/img/fig2_network.png" alt="Force-directed drawing of the Marvel giant component">
+    <figcaption>Giant component (277/303 characters). The remaining 26 sit in a 9-node island and 17 isolates. Node colour: red = high in-degree, blue = low.</figcaption>
+  </figure>
+
+  <div class="callout">
+    <strong>The island:</strong> Nine characters form a completely separate cluster — Backhand, Toxyn, Blackthorn, Scaredycat, Shear, Radian, Vyking, Snapdragon, and Scatterbrain (all Morituri characters). They reference each other but nobody in the main Marvel universe links to them.
+  </div>
+
+  <h2>The surprising finding: bridges vs celebrities</h2>
+  <p>
+    Betweenness centrality measures how often a node sits on the shortest path between two other nodes.
+    It captures structural importance — not popularity, but <em>bridging power</em>.
+    We plotted betweenness against in-degree for the top 20 bridge characters.
+  </p>
+
+  <figure class="figure">
+    <img src="../assets/img/fig3_bridges.png" alt="Betweenness centrality vs in-degree">
+    <figcaption>Top 20 characters by betweenness. High in-degree characters cluster toward the right. Hercules sits high on the y-axis with only 19 in-degree links — a genuine structural bridge, not just a celebrity.</figcaption>
+  </figure>
+
+  <p>
+    <strong>Hercules is the most surprising result.</strong> He has just 19 in-degree links — well outside the top 20 by popularity — but ranks 2nd by betweenness. He connects parts of the network that would otherwise be far apart. Remove him and paths get longer; remove Spider-Man and the network barely changes structurally.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Rank</th><th>Character</th><th>Betweenness</th><th>In-degree</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>Wolverine</td><td>0.0655</td><td>60</td></tr>
+      <tr><td>2</td><td class="highlight">Hercules</td><td>0.0610</td><td class="highlight">19</td></tr>
+      <tr><td>3</td><td>Spider-Man</td><td>0.0572</td><td>106</td></tr>
+      <tr><td>4</td><td>Deadpool</td><td>0.0570</td><td>33</td></tr>
+      <tr><td>5</td><td>Doctor Strange</td><td>0.0564</td><td>50</td></tr>
+    </tbody>
+  </table>
+
+  <h2>What we asked the LLM, and what we verified</h2>
+  <p>
+    We used Claude Code to build the entire analysis pipeline: loading the graph, computing distributions,
+    drawing figures, and generating this site. The agent was fast and mostly correct, but we caught one bug ourselves:
+    it initially loaded the edge file without <code>header=None</code>, causing the first data row to be treated as column names and losing one edge.
+    Always verify node and edge counts against the known values (303 nodes, 1,784 edges).
+  </p>
+
+  <p>
+    The betweenness calculation and the Hercules finding were genuinely surprising — we wouldn't have looked for it
+    without the agent suggesting it as an interesting angle. That's the right way to use the tool:
+    let it surface candidates, then think about whether the result actually makes sense.
+  </p>
+
+</article>
+
+<footer>
+  Built for 02805 Social Graphs and Interactions · DTU · 2026
+</footer>
+
+</body>
+</html>
