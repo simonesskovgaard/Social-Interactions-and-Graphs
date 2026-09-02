@@ -7,6 +7,96 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    /* ── LEGEND ── */
+    .legend { display:flex; flex-wrap:wrap; gap:.6rem 1.4rem; margin:1.2rem 0; }
+    .legend-item { display:flex; align-items:center; gap:.45rem; font-size:.82rem; color:#ccc; }
+    .legend-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+
+    /* ── INTERACTIVE SECTION ── */
+    #interactive-wrap {
+      margin: 2.5rem 0;
+      background: #0d0d0d;
+      border: 1px solid #2a2a2a;
+      border-radius:6px;
+      overflow:hidden;
+    }
+    #interactive-header {
+      padding:.9rem 1.2rem;
+      border-bottom:1px solid #2a2a2a;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      gap:.6rem;
+    }
+    #interactive-header h3 { margin:0; font-size:1rem; color:#e8e8e8; }
+    #interactive-body { display:flex; }
+
+    /* SVG canvas */
+    #network-svg { flex:1; min-height:480px; display:block; background:#0d0d0d; }
+
+    /* Control panel */
+    #ctrl {
+      width:220px;
+      flex-shrink:0;
+      border-left:1px solid #2a2a2a;
+      padding:1.2rem;
+      display:flex;
+      flex-direction:column;
+      gap:1rem;
+    }
+    #ctrl .stat-row { font-size:.82rem; color:#888; display:flex; justify-content:space-between; }
+    #ctrl .stat-row span { color:#e8e8e8; font-weight:600; }
+    #next-box {
+      background:#161616;
+      border:1px solid #2a2a2a;
+      border-radius:4px;
+      padding:.7rem;
+      font-size:.82rem;
+      color:#888;
+    }
+    #next-box strong { display:block; color:#e63946; font-size:.95rem; margin-bottom:.2rem; }
+    #ctrl button {
+      width:100%;
+      padding:.6rem;
+      border:none;
+      border-radius:4px;
+      font-size:.88rem;
+      font-weight:700;
+      cursor:pointer;
+      font-family:inherit;
+      transition: opacity .15s;
+    }
+    #btn-remove { background:#e63946; color:#fff; }
+    #btn-remove:hover { opacity:.85; }
+    #btn-remove:disabled { opacity:.35; cursor:default; }
+    #btn-reset  { background:#1f1f1f; color:#888; border:1px solid #2a2a2a; }
+    #btn-reset:hover { color:#e8e8e8; }
+    #removed-list {
+      font-size:.75rem;
+      color:#555;
+      line-height:1.6;
+      max-height:140px;
+      overflow-y:auto;
+    }
+    #removed-list span { display:block; }
+    #removed-list span.first { color:#e63946; }
+
+    /* Tooltip */
+    #tooltip {
+      position:fixed;
+      background:#161616;
+      border:1px solid #2a2a2a;
+      border-radius:4px;
+      padding:.5rem .75rem;
+      font-size:.78rem;
+      color:#e8e8e8;
+      pointer-events:none;
+      display:none;
+      z-index:100;
+    }
+  </style>
 </head>
 <body>
 
@@ -23,175 +113,336 @@
   <p class="post-meta">Week 01 · 2 September 2026</p>
   <h1>Main Character Syndrome in the Marvel Universe</h1>
   <p class="post-intro">
-    Every character has two numbers: how many others link to them, and how many others they link to.
-    Plot those two numbers and a hidden hierarchy appears — stars, glue, pillars, and ghosts.
-  </p>
-
-  <h2>The question</h2>
-  <p>
-    The dataset is a directed Wikipedia link network: 303 Marvel superheroes, with an edge A&nbsp;&rarr;&nbsp;B
-    whenever A's Wikipedia article links to B. We loaded all 303 nodes before adding edges —
-    otherwise the 17 characters with zero connections would silently disappear.
-  </p>
-  <p>
-    The obvious question is: who matters most? The obvious answer is in-degree —
-    Spider-Man has 106, Hulk has 64, Wolverine has 60. But that's only half the story.
-    Every character has <em>two</em> numbers, and the relationship between them is where things get interesting.
+    Every character has two numbers: how many others link to them (fame), and how many they link to (reach).
+    The gap between those two numbers tells you exactly where you stand in the Marvel hierarchy.
   </p>
 
   <h2>Two numbers, four archetypes</h2>
   <p>
-    <strong>In-degree</strong> measures how many others link to you — your fame, your gravity,
-    how much the universe orbits around you.<br>
-    <strong>Out-degree</strong> measures how many others you link to — your social reach,
-    how embedded you are in everyone else's story.
+    <strong>In-degree</strong> = how many other characters' Wikipedia articles link to you — your gravity, your fame.<br>
+    <strong>Out-degree</strong> = how many other characters your article links to — your social reach, your engagement.
   </p>
   <p>
-    Split on the median (in&nbsp;&ge;&nbsp;3, out&nbsp;&ge;&nbsp;4) and four archetypes emerge:
+    Split at the median (in&thinsp;&ge;&thinsp;3, out&thinsp;&ge;&thinsp;4) and every character falls into one of four archetypes:
   </p>
 
-  <table>
-    <thead>
-      <tr><th></th><th>Low out-degree</th><th>High out-degree</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><strong>High in-degree</strong></td>
-        <td>THE STARS — 34 characters<br><small>Everyone talks about you. You barely talk back.</small></td>
-        <td>THE PILLARS — 127 characters<br><small>Famous and connected. The true hubs.</small></td>
-      </tr>
-      <tr>
-        <td><strong>Low in-degree</strong></td>
-        <td>THE SHADOWS — 94 characters<br><small>You barely exist in this universe.</small></td>
-        <td>THE GLUE — 48 characters<br><small>You connect everyone. Nobody notices.</small></td>
-      </tr>
-    </tbody>
-  </table>
-
-  <figure class="figure">
-    <img src="../assets/img/fig1_quadrant.png" alt="Quadrant scatter plot of all 303 Marvel characters">
-    <figcaption>
-      All 303 characters plotted on log-log axes. Dashed lines mark the median in-degree (3) and out-degree (4).
-      The four quadrants each tell a different story about how a character relates to the rest of the Marvel universe.
-    </figcaption>
-  </figure>
-
-  <h2>The Stars — Main Character Syndrome in its purest form</h2>
-  <p>
-    These 34 characters have high in-degree but low out-degree. The universe talks about them constantly,
-    but their own Wikipedia articles barely mention anyone else. They are the gravitational centres —
-    everything orbits around them, but they don't orbit back.
-  </p>
-  <p>
-    The extreme case is <strong>Ms. Marvel</strong>: 11 characters link to her, but her own article
-    links to just 1. She has a Main Character Score (in / (out + 1)) of 5.5 —
-    the universe discusses her far more than she discusses the universe.
-  </p>
-
-  <h2>The Glue — the unsung heroes</h2>
-  <p>
-    These 48 characters link to many others but are rarely linked back. They appear in everyone's story
-    but never get top billing. The most extreme examples are genuinely surprising:
-  </p>
-
-  <table>
-    <thead>
-      <tr><th>Character</th><th>In-degree</th><th>Out-degree</th><th>Glue score</th></tr>
-    </thead>
-    <tbody>
-      <tr><td class="highlight">Shamrock</td><td>0</td><td>8</td><td>8.0</td></tr>
-      <tr><td class="highlight">Isaiah Bradley</td><td>0</td><td>7</td><td>7.0</td></tr>
-      <tr><td>Spider-Bitch (Ashley Barton)</td><td>2</td><td>15</td><td>5.0</td></tr>
-      <tr><td>Brian Braddock</td><td>1</td><td>11</td><td>5.5</td></tr>
-      <tr><td>Frankenstein's Monster</td><td>2</td><td>11</td><td>3.7</td></tr>
-    </tbody>
-  </table>
-
-  <p>
-    <strong>Shamrock</strong> and <strong>Isaiah Bradley</strong> have zero in-degree.
-    Their Wikipedia articles reference 8 and 7 other Marvel characters respectively — but not a single
-    character's article ever links back to them. They connect others to the network while being completely
-    invisible themselves. This is the inverse of Main Character Syndrome: the <em>Support Character Curse</em>.
-  </p>
-
-  <h2>The Main Character Score</h2>
-  <p>
-    We defined Main Character Score as in-degree / (out-degree + 1). A high score means you receive
-    far more attention than you give — the purest expression of Main Character Syndrome.
-  </p>
-
-  <figure class="figure">
-    <img src="../assets/img/fig3_mcs.png" alt="Main Character Score bar chart for top 12 characters">
-    <figcaption>
-      Top 12 characters by Main Character Score. Spider-Man scores 10.6 — for every link he sends out,
-      roughly 10 other characters link back to him.
-    </figcaption>
-  </figure>
-
-  <div class="callout">
-    <strong>The surprise:</strong> Spider-Man is technically a Pillar (high in, high out) — his out-degree is 9,
-    above the median of 4. But his MCS of 10.6 is by far the highest in the network.
-    The gap between 106 in and 9 out tells the real story.
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div> <strong>Main Characters</strong> &nbsp;(34) — high in, low out. Everyone talks about you. You barely talk back.</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div> <strong>Mutual Celebrities</strong> &nbsp;(127) — high in, high out. Famous AND embedded in everyone's story.</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div> <strong>Main Character Syndrome</strong> &nbsp;(48) — low in, high out. They think they're the star. The data disagrees.</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#333"></div> <strong>Who Invited You</strong> &nbsp;(94) — low in, low out. Barely exist.</div>
   </div>
 
-  <h2>The Morituri Bubble — a parallel universe</h2>
-  <p>
-    Nine characters form a completely separate connected component, with zero links to or from
-    the 277-character giant component. They are all from <em>The Morituri</em>, a 1980s Marvel storyline
-    about heroes who gain superpowers at the cost of their own lives. Their Wikipedia articles
-    reference each other extensively — but the wider Marvel Wikipedia ecosystem has completely ignored them.
-  </p>
-  <p>
-    Inside their bubble, <strong>Radian</strong> is their Spider-Man — the most-linked character
-    with an internal in-degree of 4. He is unknown to the 277 characters in the main universe.
-    He has never been linked to. He doesn't exist to them.
-  </p>
-
   <figure class="figure">
-    <img src="../assets/img/fig2_morituri.png" alt="Network drawing of the 9-node Morituri island">
+    <img src="../assets/img/fig1_quadrant.png" alt="Quadrant scatter of all 303 Marvel characters">
     <figcaption>
-      The Morituri bubble. Red node = Radian, their highest in-degree character.
-      Every edge in this drawing stays inside the bubble — none cross into the main Marvel network.
+      All 303 characters on log-log axes. Dashed lines = median in-degree (3) and out-degree (4).
+      Node colour encodes archetype.
     </figcaption>
   </figure>
 
-  <h2>The Forgotten 17 — not even a quadrant</h2>
+  <h2>Main Characters — the purest Main Character Syndrome</h2>
   <p>
-    Seventeen characters have degree zero: no links in, no links out. They exist in the Wikipedia
-    category "Marvel Comics superheroes" but are never mentioned by name in any other superhero's article,
-    and their own articles mention no one else. They don't belong to any quadrant.
-  </p>
-  <p>
-    The most striking case is <strong>Baymax</strong> — the robot companion from Big Hero 6,
-    a Disney movie with over $650 million at the box office. His Wikipedia page exists,
-    but it apparently links to no other Marvel superhero, and no Marvel superhero's page links to him.
-    In network terms, he is as disconnected as <strong>Super Rabbit</strong> (a 1943 Bugs Bunny parody character).
+    These 34 characters have massive in-degree relative to their out-degree. The universe constantly
+    references them; their own Wikipedia articles barely mention anyone else. The extreme case is
+    <strong>Ms. Marvel</strong> (in=11, out=1) and <strong>Quasar</strong> (in=24, out=3).
+    Spider-Man's Main Character Score — in / (out + 1) — is 10.6. For every link he sends out,
+    about ten others point back.
   </p>
 
-  <h2>What we asked, what we built, what surprised us</h2>
+  <figure class="figure">
+    <img src="../assets/img/fig3_mcs.png" alt="Main Character Score bar chart">
+    <figcaption>Top 12 by Main Character Score = in-degree / (out-degree + 1). Higher = more self-centred.</figcaption>
+  </figure>
+
+  <h2>Main Character Syndrome — the Support Character Curse</h2>
   <p>
-    We asked Claude Code to design the analysis from scratch: load the data, classify characters into
-    quadrant archetypes, compute the Main Character Score, and build this site.
-    The agent suggested the quadrant frame unprompted — we just told it the in-degree/out-degree
-    asymmetry was interesting.
+    These 48 characters link to many others but are rarely linked back. They appear in everyone's story
+    and never get top billing. The most extreme cases are <strong>Shamrock</strong> (in=0, out=8)
+    and <strong>Isaiah Bradley</strong> (in=0, out=7) — their Wikipedia articles reference 7–8 other Marvel
+    characters, but not a single one ever references them back.
   </p>
   <p>
-    The Shamrock finding genuinely surprised us. A character can be <em>active</em> in the network
-    (linking to 8 others) while being completely <em>invisible</em> (zero in-degree).
-    This is only possible in a directed network — an undirected analysis would have given her degree 8
-    and hidden the asymmetry entirely.
+    This asymmetry is invisible in an undirected network. You'd see degree 8 and think: connected character.
+    Direction reveals the truth: they are doing all the work of connection while receiving none of the credit.
   </p>
+
+  <h2>The Morituri Bubble</h2>
   <p>
-    The Morituri we expected to be boring background characters. Finding that they form a
-    self-contained parallel universe with its own internal hierarchy — Radian as their local celebrity,
-    completely unknown outside — felt like discovering a hidden room.
+    Nine characters form a completely separate connected component. They are all from <em>The Morituri</em>,
+    a 1980s storyline. Inside their bubble, <strong>Radian</strong> is their Spider-Man (in-degree 4).
+    Zero links cross into the 277-character giant. They are quarantined — not forgotten, but invisible.
+  </p>
+
+  <figure class="figure">
+    <img src="../assets/img/fig2_morituri.png" alt="The Morituri bubble">
+    <figcaption>The Morituri island. Red = Radian, their highest in-degree character. No edge in this drawing reaches the outside world.</figcaption>
+  </figure>
+
+  <h2>Who Invited You — the Forgotten 17</h2>
+  <p>
+    Seventeen characters have degree zero: no links in, no links out. They exist in the Wikipedia category
+    but are completely invisible in the network. Most surprising: <strong>Baymax</strong>, the robot companion
+    from Big Hero 6 (over $650M at the box office), is as disconnected as <strong>Super Rabbit</strong>
+    — a 1943 Bugs Bunny parody character. In network terms, fame in the real world means nothing here.
+  </p>
+
+  <h2>What happens when you delete Spider-Man?</h2>
+  <p>
+    The interactive below lets you remove the highest in-degree character from the network one at a time.
+    Nodes that get stranded — cut off from the giant component — glow orange.
+    Watch whether removing a celebrity actually breaks the network, or whether the Mutual Celebrities
+    quietly hold everything together.
   </p>
 
 </article>
 
+<!-- INTERACTIVE NETWORK -->
+<div style="max-width:960px;margin:0 auto 4rem;padding:0 1rem;">
+  <div id="interactive-wrap">
+    <div id="interactive-header">
+      <h3>Remove the top node — watch the network react</h3>
+      <div class="legend" style="margin:0;">
+        <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div>Main Character</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div>Mutual Celebrity</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div>MCS</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#444"></div>Who Invited You</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f4a261"></div>Stranded</div>
+      </div>
+    </div>
+    <div id="interactive-body">
+      <svg id="network-svg"></svg>
+      <div id="ctrl">
+        <div>
+          <div class="stat-row">Total nodes <span id="s-nodes">303</span></div>
+          <div class="stat-row">Giant component <span id="s-giant">277</span></div>
+          <div class="stat-row">Stranded <span id="s-stranded">0</span></div>
+          <div class="stat-row">Removed <span id="s-removed">0</span></div>
+        </div>
+        <div id="next-box">
+          <strong id="next-name">Loading…</strong>
+          <div>in-degree: <span id="next-indeg">—</span></div>
+          <div>archetype: <span id="next-arch">—</span></div>
+        </div>
+        <button id="btn-remove" onclick="removeTop()">Remove ↑ top node</button>
+        <button id="btn-reset"  onclick="resetNetwork()">Reset</button>
+        <div style="font-size:.75rem;color:#555;margin-top:.3rem">Removed:</div>
+        <div id="removed-list"><span style="color:#444">none yet</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <footer>
   Built for 02805 Social Graphs and Interactions · DTU · 2026
 </footer>
+
+<div id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+const COLORS = {
+  main_character:       '#e63946',
+  mutual_celebrity:     '#9b5de5',
+  main_character_syndrome: '#457b9d',
+  who_invited_you:      '#333333',
+  stranded:             '#f4a261',
+};
+const ARCH_LABELS = {
+  main_character:          'Main Character',
+  mutual_celebrity:        'Mutual Celebrity',
+  main_character_syndrome: 'Main Character Syndrome',
+  who_invited_you:         'Who Invited You',
+};
+
+let allNodes = [], allLinks = [];
+let removedIds = new Set();
+let simulation, svg, linkSel, nodeSel;
+let giantIds = new Set();
+
+const tooltip = document.getElementById('tooltip');
+
+fetch('../assets/data/network.json')
+  .then(r => r.json())
+  .then(data => {
+    allNodes = data.nodes.map(d => ({...d}));
+    allLinks = data.links.map(d => ({source: d.source, target: d.target}));
+    initViz();
+  });
+
+function initViz() {
+  const wrap = document.getElementById('network-svg');
+  const W = wrap.parentElement.clientWidth - 220;
+  const H = 480;
+  wrap.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  wrap.setAttribute('width', W);
+  wrap.setAttribute('height', H);
+
+  svg = d3.select('#network-svg');
+  svg.append('defs').append('marker')
+    .attr('id','arrow').attr('viewBox','0 -4 8 8')
+    .attr('refX',12).attr('markerWidth',6).attr('markerHeight',6)
+    .attr('orient','auto')
+    .append('path').attr('d','M0,-4L8,0L0,4').attr('fill','#333');
+
+  const g = svg.append('g').attr('id','main-g');
+  svg.call(d3.zoom().scaleExtent([0.3,5]).on('zoom', e => g.attr('transform', e.transform)));
+
+  linkSel = g.append('g').attr('id','links');
+  nodeSel = g.append('g').attr('id','nodes');
+
+  simulation = d3.forceSimulation()
+    .force('link', d3.forceLink().id(d => d.id).distance(28).strength(0.4))
+    .force('charge', d3.forceManyBody().strength(-55))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('collide', d3.forceCollide().radius(d => nodeR(d) + 2))
+    .on('tick', ticked);
+
+  rebind();
+  updatePanel();
+}
+
+function nodeR(d) { return Math.max(3, Math.min(14, 3 + d.in_deg * 0.25)); }
+
+function nodeColor(d) {
+  if (!giantIds.size) return COLORS[d.quadrant];
+  if (!giantIds.has(d.id)) return COLORS.stranded;
+  return COLORS[d.quadrant];
+}
+
+function rebind() {
+  const activeNodes = allNodes.filter(n => !removedIds.has(n.id));
+  const activeNodeIds = new Set(activeNodes.map(n => n.id));
+  const activeLinks = allLinks.filter(l => activeNodeIds.has(l.source.id ?? l.source) && activeNodeIds.has(l.target.id ?? l.target));
+
+  giantIds = findGiant(activeNodes, activeLinks);
+
+  // Links
+  const ldata = linkSel.selectAll('line').data(activeLinks, d => `${d.source.id??d.source}→${d.target.id??d.target}`);
+  ldata.exit().remove();
+  ldata.enter().append('line')
+    .attr('stroke', '#222')
+    .attr('stroke-width', 0.8)
+    .attr('stroke-opacity', 0.6);
+
+  // Nodes
+  const ndata = nodeSel.selectAll('circle').data(activeNodes, d => d.id);
+  ndata.exit().transition().duration(300).attr('r', 0).remove();
+
+  const entered = ndata.enter().append('circle')
+    .attr('r', 0)
+    .attr('fill', d => COLORS[d.quadrant])
+    .attr('stroke', '#0d0d0d')
+    .attr('stroke-width', 0.8)
+    .call(d3.drag()
+      .on('start', (e,d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on('drag',  (e,d) => { d.fx=e.x; d.fy=e.y; })
+      .on('end',   (e,d) => { if (!e.active) simulation.alphaTarget(0); d.fx=null; d.fy=null; }))
+    .on('mousemove', (e,d) => {
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX+12)+'px';
+      tooltip.style.top  = (e.clientY-8)+'px';
+      tooltip.innerHTML = `<strong>${d.name}</strong><br>in: ${d.in_deg} · out: ${d.out_deg}<br>${ARCH_LABELS[d.quadrant]}`;
+    })
+    .on('mouseleave', () => tooltip.style.display='none');
+
+  entered.transition().duration(300).attr('r', d => nodeR(d));
+
+  // Update colors on existing nodes
+  nodeSel.selectAll('circle').transition().duration(400)
+    .attr('fill', d => nodeColor(d));
+
+  simulation.nodes(activeNodes);
+  simulation.force('link').links(activeLinks);
+  simulation.alpha(0.4).restart();
+}
+
+function ticked() {
+  linkSel.selectAll('line')
+    .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+  nodeSel.selectAll('circle')
+    .attr('cx', d => d.x).attr('cy', d => d.y);
+}
+
+function findGiant(nodes, links) {
+  const adj = {};
+  nodes.forEach(n => adj[n.id] = []);
+  links.forEach(l => {
+    const s = l.source.id ?? l.source;
+    const t = l.target.id ?? l.target;
+    if (adj[s] !== undefined) adj[s].push(t);
+    if (adj[t] !== undefined) adj[t].push(s);
+  });
+  const visited = new Set();
+  let biggest = [];
+  nodes.forEach(n => {
+    if (visited.has(n.id)) return;
+    const comp = [], q = [n.id];
+    visited.add(n.id);
+    while (q.length) {
+      const cur = q.shift();
+      comp.push(cur);
+      (adj[cur]||[]).forEach(nb => { if (!visited.has(nb)) { visited.add(nb); q.push(nb); } });
+    }
+    if (comp.length > biggest.length) biggest = comp;
+  });
+  return new Set(biggest);
+}
+
+function nextTop() {
+  return allNodes
+    .filter(n => !removedIds.has(n.id))
+    .sort((a,b) => b.in_deg - a.in_deg)[0];
+}
+
+function updatePanel() {
+  const top = nextTop();
+  const active = allNodes.filter(n => !removedIds.has(n.id));
+  const stranded = active.filter(n => !giantIds.has(n.id)).length;
+
+  document.getElementById('s-nodes').textContent   = active.length;
+  document.getElementById('s-giant').textContent   = giantIds.size;
+  document.getElementById('s-stranded').textContent = stranded;
+  document.getElementById('s-removed').textContent = removedIds.size;
+
+  if (top) {
+    document.getElementById('next-name').textContent  = top.name;
+    document.getElementById('next-indeg').textContent = top.in_deg;
+    document.getElementById('next-arch').textContent  = ARCH_LABELS[top.quadrant];
+    document.getElementById('btn-remove').disabled = false;
+  } else {
+    document.getElementById('next-name').textContent = 'All removed';
+    document.getElementById('btn-remove').disabled = true;
+  }
+
+  const list = document.getElementById('removed-list');
+  if (removedIds.size === 0) {
+    list.innerHTML = '<span style="color:#444">none yet</span>';
+  } else {
+    const items = [...removedIds].reverse().map((id, i) => {
+      const n = allNodes.find(x => x.id === id);
+      return `<span class="${i===0?'first':''}">${n ? n.name : id}</span>`;
+    }).join('');
+    list.innerHTML = items;
+  }
+}
+
+function removeTop() {
+  const top = nextTop();
+  if (!top) return;
+  removedIds.add(top.id);
+  rebind();
+  updatePanel();
+}
+
+function resetNetwork() {
+  removedIds.clear();
+  giantIds = new Set();
+  rebind();
+  updatePanel();
+}
+</script>
 
 </body>
 </html>
