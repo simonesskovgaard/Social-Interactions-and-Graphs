@@ -157,10 +157,10 @@
   </p>
 
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div> <strong>Main Characters</strong> &nbsp;(34) — high in, low out. Everyone talks about you. You barely talk back.</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div> <strong>Mutual Celebrities</strong> &nbsp;(127) — high in, high out. Famous AND embedded in everyone's story.</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div> <strong>Main Character Syndrome</strong> &nbsp;(48) — low in, high out. They think they're the star. The data disagrees.</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div> <strong>Who Invited You</strong> &nbsp;(94) — low in, low out. Barely exist.</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div> <strong>The Legends</strong> &nbsp;(34) — high in, low out. Everyone references you. You reference almost no one. Genuinely famous.</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div> <strong>Mutual Celebrities</strong> &nbsp;(127) — high in, high out. Famous AND deeply embedded in everyone else's story.</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div> <strong>Main Character Syndrome</strong> &nbsp;(48) — low in, high out. They link to everyone. Nobody links back. The delusion is real.</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div> <strong>Who Invited You</strong> &nbsp;(94) — low in, low out. Barely exist in either direction.</div>
   </div>
 
   <div class="figure" id="fig-quadrant">
@@ -168,27 +168,31 @@
     <figcaption>All 303 characters on log-log axes. Dashed lines = medians. Hover to identify. Scroll to zoom, drag to pan.</figcaption>
   </div>
 
-  <h2>Main Characters — the purest Main Character Syndrome</h2>
+  <h2>The Legends — genuinely famous, low engagement</h2>
   <p>
-    These 34 characters have massive in-degree relative to their out-degree. The universe constantly
-    references them; their own Wikipedia articles barely mention anyone else. The extreme case is
-    <strong>Ms. Marvel</strong> (in=11, out=1) and <strong>Quasar</strong> (in=24, out=3).
-    Spider-Man's Main Character Score — in / (out + 1) — is 10.6. For every link he sends out,
-    about ten others point back.
+    These 34 characters have massive in-degree relative to their out-degree. The Marvel universe
+    constantly references them; their own Wikipedia articles barely mention anyone else.
+    <strong>Ms. Marvel</strong> (in=11, out=1) and <strong>Quasar</strong> (in=24, out=3) are extreme cases.
+    They're not suffering from syndrome — they actually ARE the story.
+  </p>
+
+  <h2>Main Character Syndrome — the delusion, ranked</h2>
+  <p>
+    Main Character Syndrome is when you think you're the protagonist but the data says otherwise.
+    The tell: <strong>high out-degree, low in-degree</strong>. You reference everyone — you're in their story,
+    you know their name, you link to their world. But they don't link back. You're not the main character.
+    You just act like one.
+  </p>
+  <p>
+    The syndrome score is <strong>out / (in + 1)</strong>: high score = you reach out a lot, nobody references you back.
+    <strong>Shamrock</strong> leads with a perfect score of 8.0 (in=0, out=8): references 8 characters and appears in zero of their articles.
   </p>
 
   <div class="figure" id="fig-mcs">
     <svg id="mcs-svg" style="width:100%;height:380px;display:block;background:#0d0d0d"></svg>
-    <figcaption>Top 15 by Main Character Score = in / (out + 1). Hover bars for details.</figcaption>
+    <figcaption>Top 15 syndrome sufferers — ranked by out / (in + 1). High score = you reach out a lot, nobody reaches back.</figcaption>
   </div>
 
-  <h2>Main Character Syndrome — the Support Character Curse</h2>
-  <p>
-    These 48 characters link to many others but are rarely linked back. They appear in everyone's story
-    and never get top billing. The most extreme cases are <strong>Shamrock</strong> (in=0, out=8)
-    and <strong>Isaiah Bradley</strong> (in=0, out=7) — their Wikipedia articles reference 7–8 other Marvel
-    characters, but not a single one ever references them back.
-  </p>
   <p>
     This asymmetry is invisible in an undirected network. You'd see degree 8 and think: connected character.
     Direction reveals the truth: they are doing all the work of connection while receiving none of the credit.
@@ -235,7 +239,7 @@
           <button class="mode-btn"        onclick="setMode('community')">By Community</button>
         </div>
         <div id="archetype-legend" class="legend" style="margin:0;">
-          <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div>Main Character</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div>The Legends</div>
           <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div>Mutual Celebrity</div>
           <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div>MCS</div>
           <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Who Invited You</div>
@@ -289,7 +293,7 @@ const QCOLORS = {
   main_character_syndrome: '#457b9d', who_invited_you: '#6b7280',
 };
 const QLABELS = {
-  main_character:'Main Character', mutual_celebrity:'Mutual Celebrity',
+  main_character:'The Legends', mutual_celebrity:'Mutual Celebrity',
   main_character_syndrome:'Main Character Syndrome', who_invited_you:'Who Invited You',
 };
 
@@ -350,7 +354,7 @@ function drawQuadrant(data) {
 
   // Quadrant labels — fixed in screen-space corners, never zoom
   const qlabels = [
-    {t:'Main Characters',    px:0.03, py:0.05, c:'#e63946'},
+    {t:'The Legends',        px:0.03, py:0.05, c:'#e63946'},
     {t:'Mutual Celebrities', px:0.58, py:0.05, c:'#9b5de5'},
     {t:'MCS',                px:0.58, py:0.90, c:'#457b9d'},
     {t:'Who Invited You',    px:0.03, py:0.90, c:'#6b7280'},
@@ -502,7 +506,7 @@ const ARCHETYPE_COLORS = {
   who_invited_you:         '#6b7280',
 };
 const ARCH_LABELS = {
-  main_character:          'Main Character',
+  main_character:          'The Legends',
   mutual_celebrity:        'Mutual Celebrity',
   main_character_syndrome: 'Main Character Syndrome',
   who_invited_you:         'Who Invited You',
@@ -634,7 +638,7 @@ function rebind() {
     .data(links, l => `${l.source.id??l.source}|${l.target.id??l.target}`);
   lsel.exit().transition().duration(350).attr('stroke-opacity', 0).remove();
   lsel.enter().append('line')
-    .attr('stroke','#555').attr('stroke-width', 0.5).attr('stroke-opacity', 0.15);
+    .attr('stroke','#666').attr('stroke-width', 0.8).attr('stroke-opacity', 0.35);
 
   // Nodes — use enter+merge so ONE transition covers both r and fill,
   // avoiding the D3 transition-interrupt bug (two transitions on same nodes
