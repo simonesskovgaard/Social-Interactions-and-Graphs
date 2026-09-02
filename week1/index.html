@@ -98,7 +98,7 @@
     }
     .mode-btn:first-child { border-radius:4px 0 0 4px; }
     .mode-btn:last-child  { border-radius:0 4px 4px 0; border-left:none; }
-    .mode-btn.active { background:#2a2a2a; color:#e8e8e8; }
+    .mode-btn.active { background:#e63946; color:#fff; border-color:#e63946; }
 
     /* Community legend */
     #comm-legend {
@@ -533,7 +533,7 @@ fetch('../assets/data/network.json')
     initViz();
   });
 
-function nodeR(d) { return Math.max(3, Math.min(14, 3 + d.in_deg * 0.25)); }
+function nodeR(d) { return Math.max(5, Math.min(20, 4 + d.in_deg * 0.35)); }
 
 function baseColor(d) {
   return colorMode === 'community'
@@ -623,15 +623,17 @@ function rebind() {
     .data(links, l => `${l.source.id??l.source}|${l.target.id??l.target}`);
   lsel.exit().remove();
   lsel.enter().append('line')
-    .attr('stroke','#1e1e1e').attr('stroke-width', 0.8).attr('stroke-opacity', 0.7);
+    .attr('stroke','#333').attr('stroke-width', 0.7).attr('stroke-opacity', 0.35);
 
-  // Nodes
+  // Nodes — use enter+merge so ONE transition covers both r and fill,
+  // avoiding the D3 transition-interrupt bug (two transitions on same nodes
+  // causes the second to interrupt the first, freezing r at 0).
   const nsel = nodeSel.selectAll('circle').data(nodes, d => d.id);
 
   nsel.exit().transition().duration(400)
     .attr('r', 0).attr('opacity', 0).remove();
 
-  nsel.enter().append('circle')
+  const entered = nsel.enter().append('circle')
     .attr('r', 0)
     .attr('fill', d => baseColor(d))
     .attr('stroke','#0d0d0d').attr('stroke-width', 0.8)
@@ -643,23 +645,25 @@ function rebind() {
       tooltip.style.cssText = `display:block;left:${e.clientX+14}px;top:${e.clientY-10}px`;
       tooltip.innerHTML = `<strong>${d.name}</strong><br>in:${d.in_deg} · out:${d.out_deg}<br>${ARCH_LABELS[d.quadrant]}<br><span style="color:#888">Community ${d.community}</span>`;
     })
-    .on('mouseleave', () => tooltip.style.display = 'none')
-    .transition().duration(350).attr('r', d => nodeR(d));
+    .on('mouseleave', () => tooltip.style.display = 'none');
 
-  // Recolor all nodes smoothly
-  nodeSel.selectAll('circle').transition().duration(450)
-    .attr('fill',         d => nodeColor(d))
-    .attr('stroke',       d => nowStranded.has(d.id) ? STRANDED : '#0d0d0d')
-    .attr('stroke-width', d => nowStranded.has(d.id) ? 2 : 0.8)
-    .attr('filter',       d => nowStranded.has(d.id) ? 'url(#glow)' : null);
+  // Single transition on merged enter+update — r and fill in one go
+  entered.merge(nsel).transition().duration(400)
+    .attr('r',           d => nodeR(d))
+    .attr('fill',        d => nodeColor(d))
+    .attr('stroke',      d => nowStranded.has(d.id) ? STRANDED : '#0d0d0d')
+    .attr('stroke-width',d => nowStranded.has(d.id) ? 2 : 0.8)
+    .attr('filter',      d => nowStranded.has(d.id) ? 'url(#glow)' : null);
 
-  // Pulse-flash newly stranded nodes
+  // Pulse-flash newly stranded nodes using a named transition namespace
+  // so it doesn't interrupt the main transition above
   if (newlyStranded.length) {
+    const newlySet = new Set(newlyStranded);
     nodeSel.selectAll('circle')
-      .filter(d => newlyStranded.includes(d.id))
+      .filter(d => newlySet.has(d.id))
       .raise()
-      .transition().duration(180).attr('r', d => nodeR(d) * 2.5)
-      .transition().duration(320).attr('r', d => nodeR(d));
+      .transition('pulse').duration(180).attr('r', d => nodeR(d) * 2.5)
+      .transition('pulse').duration(320).attr('r', d => nodeR(d));
   }
 
   simulation.nodes(nodes);
@@ -730,7 +734,7 @@ function setMode(mode) {
     b.classList.toggle('active', (i===0) === (mode==='archetype')));
   document.getElementById('archetype-legend').style.display = mode==='archetype' ? '' : 'none';
   document.getElementById('comm-legend').classList.toggle('visible', mode==='community');
-  nodeSel.selectAll('circle').transition().duration(400).attr('fill', d => nodeColor(d));
+  nodeSel.selectAll('circle').transition('recolor').duration(400).attr('fill', d => nodeColor(d));
 }
 
 function buildCommLegend() {
