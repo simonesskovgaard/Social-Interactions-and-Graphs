@@ -3,7 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Week 1 — Main Character Syndrome</title>
+  <title>Week 1 — Main Character Syndrome | 02805 Social Graphs</title>
+  <meta name="description" content="Directed link analysis of 303 Marvel characters on Wikipedia. Four archetypes emerge from in vs out degree — including Main Character Syndrome. Built for DTU 02805.">
+  <meta property="og:title" content="Main Character Syndrome in the Marvel Universe">
+  <meta property="og:description" content="303 characters. 1,784 wiki-links. Four archetypes. See who's actually the main character.">
+  <meta property="og:type" content="article">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/style.css">
@@ -341,6 +345,28 @@
     .surprise.visible, .refs.visible {
       opacity:1;
       transform:translateY(0);
+    }
+    /* Respect user reduced-motion preferences */
+    @media (prefers-reduced-motion: reduce) {
+      .figure, .tldr, .numbers, .surprise, .refs {
+        opacity:1; transform:none; transition:none;
+      }
+    }
+
+    /* ── Responsive: stack interactive on narrow screens ── */
+    @media (max-width: 720px) {
+      #interactive-body { flex-direction:column; }
+      #ctrl {
+        width:100%;
+        border-left:none;
+        border-top:1px solid #2a2a2a;
+      }
+      #network-svg { min-height:480px; }
+      .dist-controls, .search-wrap { flex-direction:column; align-items:stretch; }
+      .dist-controls .grp, .search-wrap input { width:100%; }
+      #interactive-header { flex-direction:column; align-items:flex-start; gap:.7rem; }
+      .mode-toggle { width:100%; }
+      .mode-btn { flex:1; }
     }
   </style>
 </head>
@@ -1104,8 +1130,11 @@ function findGiant(nodes, links) {
 
 function initViz() {
   const wrap = document.getElementById('network-svg');
-  const W = Math.max(400, wrap.parentElement.clientWidth - 220);
-  const H = 620;
+  const parentW = wrap.parentElement.clientWidth || 900;
+  const stacked = window.innerWidth <= 720;
+  // In stacked layout the ctrl panel is below (not beside), so no -220 subtraction
+  const W = stacked ? Math.max(320, parentW) : Math.max(400, parentW - 220);
+  const H = stacked ? 480 : 620;
   wrap.setAttribute('viewBox', `0 0 ${W} ${H}`);
   wrap.setAttribute('width',  W);
   wrap.setAttribute('height', H);
@@ -1321,7 +1350,11 @@ function setMode(mode) {
     b.classList.toggle('active', (i===0) === (mode==='archetype')));
   document.getElementById('archetype-legend').style.display = mode==='archetype' ? '' : 'none';
   document.getElementById('comm-legend').classList.toggle('visible', mode==='community');
-  nodeSel.selectAll('circle').transition('recolor').duration(400).attr('fill', d => nodeColor(d));
+  // Skip recolor if the network hasn't finished initialising yet
+  if (nodeSel) {
+    nodeSel.selectAll('circle').transition('recolor').duration(400)
+      .attr('fill', d => nodeColor(d));
+  }
 }
 
 function buildCommLegend() {
