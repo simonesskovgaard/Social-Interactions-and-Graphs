@@ -600,11 +600,12 @@ function initViz() {
   linkSel = g.append('g');
   nodeSel = g.append('g');
 
-  // Pulsing ring that floats on the next-to-remove node
+  // Static purple ring that floats on the next-to-remove node
   pulseCircle = g.append('circle')
     .attr('fill', 'none')
-    .attr('stroke', '#e63946')
+    .attr('stroke', '#9b5de5')
     .attr('stroke-width', 2.5)
+    .attr('stroke-dasharray', '5,3')
     .attr('pointer-events', 'none')
     .attr('opacity', 0)
     .attr('r', 10);
@@ -631,7 +632,7 @@ function rebind() {
   // Links
   const lsel = linkSel.selectAll('line')
     .data(links, l => `${l.source.id??l.source}|${l.target.id??l.target}`);
-  lsel.exit().remove();
+  lsel.exit().transition().duration(350).attr('stroke-opacity', 0).remove();
   lsel.enter().append('line')
     .attr('stroke','#555').attr('stroke-width', 0.5).attr('stroke-opacity', 0.15);
 
@@ -692,15 +693,10 @@ function ticked() {
   }
 }
 
-function animatePulse() {
+function showRing() {
   if (!topNodeData || !pulseCircle) return;
-  const r = nodeR(topNodeData);
-  pulseCircle.attr('r', r).attr('opacity', 0.9).attr('stroke-width', 2.5);
-  pulseCircle.transition('puff').duration(1100).ease(d3.easeCubicOut)
-    .attr('r', r * 3.8)
-    .attr('opacity', 0)
-    .attr('stroke-width', 0.5)
-    .on('end', animatePulse);
+  const r = nodeR(topNodeData) + 6;
+  pulseCircle.attr('r', r).attr('opacity', 0.85);
 }
 
 function nextTop() {
@@ -723,15 +719,13 @@ function updatePanel() {
     document.getElementById('next-arch').textContent  = ARCH_LABELS[top.quadrant];
     document.getElementById('btn-remove').disabled = false;
 
-    // Update pulse target; restart animation if the top node changed
-    const changed = !topNodeData || topNodeData.id !== top.id;
     topNodeData = top;
-    if (changed) { pulseCircle?.interrupt('puff'); animatePulse(); }
+    showRing();
   } else {
     document.getElementById('next-name').textContent = 'All removed';
     document.getElementById('btn-remove').disabled   = true;
     topNodeData = null;
-    pulseCircle?.interrupt('puff').attr('opacity', 0);
+    pulseCircle?.attr('opacity', 0);
   }
 
   const list = document.getElementById('removed-list');
