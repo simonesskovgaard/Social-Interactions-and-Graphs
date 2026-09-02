@@ -160,7 +160,7 @@
     <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div> <strong>Main Characters</strong> &nbsp;(34) — high in, low out. Everyone talks about you. You barely talk back.</div>
     <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div> <strong>Mutual Celebrities</strong> &nbsp;(127) — high in, high out. Famous AND embedded in everyone's story.</div>
     <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div> <strong>Main Character Syndrome</strong> &nbsp;(48) — low in, high out. They think they're the star. The data disagrees.</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#333"></div> <strong>Who Invited You</strong> &nbsp;(94) — low in, low out. Barely exist.</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div> <strong>Who Invited You</strong> &nbsp;(94) — low in, low out. Barely exist.</div>
   </div>
 
   <div class="figure" id="fig-quadrant">
@@ -238,7 +238,7 @@
           <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div>Main Character</div>
           <div class="legend-item"><div class="legend-dot" style="background:#9b5de5"></div>Mutual Celebrity</div>
           <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div>MCS</div>
-          <div class="legend-item"><div class="legend-dot" style="background:#444"></div>Who Invited You</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#6b7280"></div>Who Invited You</div>
           <div class="legend-item"><div class="legend-dot" style="background:#f4a261"></div>Stranded</div>
         </div>
         <div id="comm-legend"></div>
@@ -286,7 +286,7 @@ function hideTT() { tt.style.display = 'none'; }
 // ── Chart colours ─────────────────────────────────────────────────────────────
 const QCOLORS = {
   main_character: '#e63946', mutual_celebrity: '#9b5de5',
-  main_character_syndrome: '#457b9d', who_invited_you: '#2a2a2a',
+  main_character_syndrome: '#457b9d', who_invited_you: '#6b7280',
 };
 const QLABELS = {
   main_character:'Main Character', mutual_celebrity:'Mutual Celebrity',
@@ -301,85 +301,115 @@ fetch('../assets/data/charts.json').then(r => r.json()).then(data => {
 
 // ── Fig 1: Quadrant scatter ───────────────────────────────────────────────────
 function drawQuadrant(data) {
-  const el  = document.getElementById('quad-svg');
-  const W   = el.clientWidth || 680, H = 420;
-  const m   = {top:30, right:20, bottom:50, left:55};
-  const iW  = W - m.left - m.right, iH = H - m.top - m.bottom;
+  const el = document.getElementById('quad-svg');
+  const W  = el.clientWidth || 680, H = 420;
+  const m  = {top:30, right:20, bottom:50, left:55};
+  const iW = W - m.left - m.right, iH = H - m.top - m.bottom;
 
   const svg = d3.select('#quad-svg').attr('viewBox', `0 0 ${W} ${H}`);
-  const g   = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
-  const zoomG = g.append('g');
 
-  const x = d3.scaleLog().domain([0.8, 35]).range([0, iW]);
-  const y = d3.scaleLog().domain([0.8, 140]).range([iH, 0]);
+  // Clip path keeps dots inside chart bounds when panning/zooming
+  svg.append('defs').append('clipPath').attr('id','quad-clip')
+    .append('rect').attr('width', iW).attr('height', iH);
 
-  // Gridlines
-  g.append('g').attr('class','grid').selectAll('line.v')
-    .data([1,2,5,10,20]).enter().append('line')
-    .attr('x1', d => x(d)).attr('x2', d => x(d))
-    .attr('y1', 0).attr('y2', iH)
-    .attr('stroke','#1e1e1e').attr('stroke-width', 1);
-  g.append('g').attr('class','grid').selectAll('line.h')
-    .data([1,2,5,10,20,50,100]).enter().append('line')
-    .attr('x1', 0).attr('x2', iW)
-    .attr('y1', d => y(d)).attr('y2', d => y(d))
-    .attr('stroke','#1e1e1e').attr('stroke-width', 1);
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
 
-  // Median lines
-  g.append('line').attr('x1',x(4)).attr('x2',x(4)).attr('y1',0).attr('y2',iH)
-    .attr('stroke','#333').attr('stroke-dasharray','4,3').attr('stroke-width',1.2);
-  g.append('line').attr('x1',0).attr('x2',iW).attr('y1',y(3)).attr('y2',y(3))
-    .attr('stroke','#333').attr('stroke-dasharray','4,3').attr('stroke-width',1.2);
+  // Base scales — these never change; rescaled copies are used for rendering
+  const xBase = d3.scaleLog().domain([0.8, 35]).range([0, iW]);
+  const yBase = d3.scaleLog().domain([0.8, 140]).range([iH, 0]);
 
-  // Quadrant labels
-  const ql = [{t:'Main Characters',      x:0.04, y:0.04, c:'#e63946'},
-               {t:'Mutual Celebrities',   x:0.60, y:0.04, c:'#9b5de5'},
-               {t:'Main Char. Syndrome',  x:0.60, y:0.82, c:'#457b9d'},
-               {t:'Who Invited You',      x:0.04, y:0.82, c:'#555'}];
-  ql.forEach(q => g.append('text')
-    .attr('x', iW*q.x).attr('y', iH*q.y)
-    .attr('fill', q.c).attr('font-size', 10).attr('font-weight', 700).attr('opacity',.7)
-    .text(q.t));
+  // Grid line values
+  const xTicks = [1,2,5,10,20];
+  const yTicks = [1,2,5,10,20,50,100];
 
-  // Axes
-  g.append('g').attr('transform',`translate(0,${iH})`)
-    .call(d3.axisBottom(x).ticks(5,'~s').tickSize(4))
-    .call(ax => ax.select('.domain').remove())
-    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
-  g.append('g')
-    .call(d3.axisLeft(y).ticks(5,'~s').tickSize(4))
-    .call(ax => ax.select('.domain').remove())
-    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+  // Grid groups — lines repositioned on every zoom tick
+  const xGrid = g.append('g');
+  xGrid.selectAll('line').data(xTicks).enter().append('line')
+    .attr('y1',0).attr('y2',iH).attr('stroke','#1e1e1e').attr('stroke-width',1);
 
-  g.append('text').attr('x',iW/2).attr('y',iH+40).attr('text-anchor','middle')
+  const yGrid = g.append('g');
+  yGrid.selectAll('line').data(yTicks).enter().append('line')
+    .attr('x1',0).attr('x2',iW).attr('stroke','#1e1e1e').attr('stroke-width',1);
+
+  // Median lines — repositioned on zoom
+  const medV = g.append('line').attr('y1',0).attr('y2',iH)
+    .attr('stroke','#3a3a3a').attr('stroke-dasharray','5,3').attr('stroke-width',1.2);
+  const medH = g.append('line').attr('x1',0).attr('x2',iW)
+    .attr('stroke','#3a3a3a').attr('stroke-dasharray','5,3').attr('stroke-width',1.2);
+
+  // Axis groups — redrawn on zoom
+  const xAxisG = g.append('g').attr('transform',`translate(0,${iH})`);
+  const yAxisG = g.append('g');
+
+  // Axis labels (fixed, not part of zoom)
+  g.append('text').attr('x',iW/2).attr('y',iH+42).attr('text-anchor','middle')
     .attr('fill','#666').attr('font-size',11).text('Out-degree (you link to others)');
-  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-42)
-    .attr('text-anchor','middle').attr('fill','#666').attr('font-size',11).text('In-degree (others link to you)');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-44)
+    .attr('text-anchor','middle').attr('fill','#666').attr('font-size',11)
+    .text('In-degree (others link to you)');
 
-  // Zoom
-  const zoom = d3.zoom().scaleExtent([0.5,12])
-    .on('zoom', e => { zoomG.attr('transform', e.transform); });
-  svg.call(zoom);
+  // Quadrant labels — fixed in screen-space corners, never zoom
+  const qlabels = [
+    {t:'Main Characters',    px:0.03, py:0.05, c:'#e63946'},
+    {t:'Mutual Celebrities', px:0.58, py:0.05, c:'#9b5de5'},
+    {t:'MCS',                px:0.58, py:0.90, c:'#457b9d'},
+    {t:'Who Invited You',    px:0.03, py:0.90, c:'#6b7280'},
+  ];
+  qlabels.forEach(q => g.append('text')
+    .attr('x', iW*q.px).attr('y', iH*q.py)
+    .attr('fill',q.c).attr('font-size',9.5).attr('font-weight',700).attr('opacity',0.65)
+    .attr('pointer-events','none').text(q.t));
 
-  // Dots
-  const dots = zoomG.selectAll('circle').data(data).enter().append('circle')
-    .attr('cx', d => x(Math.max(0.9, d.out_deg)))
-    .attr('cy', d => y(Math.max(0.9, d.in_deg)))
+  // Data group with clip path — dots and their labels live here
+  const dataG = g.append('g').attr('clip-path','url(#quad-clip)');
+
+  const labeled = data.filter(d => d.in_deg >= 30 || d.mcs >= 5);
+
+  const dots = dataG.selectAll('circle').data(data).enter().append('circle')
     .attr('r', 4.5)
     .attr('fill', d => QCOLORS[d.quadrant])
-    .attr('opacity', 0.8)
-    .attr('stroke','#0d0d0d').attr('stroke-width', 0.5)
+    .attr('opacity', 0.85)
+    .attr('stroke','#0d0d0d').attr('stroke-width',0.5)
     .on('mousemove', (e,d) => showTT(e,
       `<strong>${d.name}</strong><br>in:${d.in_deg} · out:${d.out_deg}<br>${QLABELS[d.quadrant]}<br>MCS: ${d.mcs}`))
     .on('mouseleave', hideTT);
 
-  // Label top characters
-  const labeled = data.filter(d => d.in_deg >= 30 || d.mcs >= 5);
-  zoomG.selectAll('text.lbl').data(labeled).enter().append('text')
-    .attr('x', d => x(Math.max(0.9, d.out_deg)) + 6)
-    .attr('y', d => y(Math.max(0.9, d.in_deg)) + 4)
-    .attr('fill','#ccc').attr('font-size', 8.5).attr('pointer-events','none')
+  const lbls = dataG.selectAll('text.lbl').data(labeled).enter().append('text')
+    .attr('class','lbl')
+    .attr('fill','#ccc').attr('font-size',8.5).attr('pointer-events','none')
     .text(d => d.name.split('(')[0].trim());
+
+  // render(xS, yS) — repositions every element using current scales
+  function render(xS, yS) {
+    xGrid.selectAll('line').data(xTicks)
+      .attr('x1', d => xS(d)).attr('x2', d => xS(d));
+    yGrid.selectAll('line').data(yTicks)
+      .attr('y1', d => yS(d)).attr('y2', d => yS(d));
+
+    medV.attr('x1', xS(4)).attr('x2', xS(4));
+    medH.attr('y1', yS(3)).attr('y2', yS(3));
+
+    xAxisG.call(d3.axisBottom(xS).ticks(5,'~s').tickSize(4))
+      .call(ax => ax.select('.domain').remove())
+      .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+    yAxisG.call(d3.axisLeft(yS).ticks(5,'~s').tickSize(4))
+      .call(ax => ax.select('.domain').remove())
+      .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+
+    dots.attr('cx', d => xS(Math.max(0.85, d.out_deg)))
+        .attr('cy', d => yS(Math.max(0.85, d.in_deg)));
+
+    lbls.attr('x', d => xS(Math.max(0.85, d.out_deg)) + 6)
+        .attr('y', d => yS(Math.max(0.85, d.in_deg)) + 4);
+  }
+
+  render(xBase, yBase);
+
+  // Zoom: rescale axes from the base, then re-render
+  svg.call(
+    d3.zoom().scaleExtent([0.5, 20])
+      .on('zoom', e => render(e.transform.rescaleX(xBase), e.transform.rescaleY(yBase)))
+  ).on('dblclick.zoom', null);
 }
 
 // ── Fig 2: MCS bar chart ──────────────────────────────────────────────────────
@@ -469,7 +499,7 @@ const ARCHETYPE_COLORS = {
   main_character:          '#e63946',
   mutual_celebrity:        '#9b5de5',
   main_character_syndrome: '#457b9d',
-  who_invited_you:         '#2a2a2a',
+  who_invited_you:         '#6b7280',
 };
 const ARCH_LABELS = {
   main_character:          'Main Character',
