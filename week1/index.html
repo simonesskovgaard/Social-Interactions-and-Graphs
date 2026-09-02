@@ -103,12 +103,13 @@
     /* Community legend */
     #comm-legend {
       display:none;
-      align-items:center;
-      gap:.3rem;
+      flex-wrap:wrap;
+      gap:.35rem .9rem;
       margin-top:.5rem;
     }
     #comm-legend.visible { display:flex; }
-    .comm-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .comm-item { display:flex; align-items:center; gap:.35rem; font-size:.75rem; color:#aaa; white-space:nowrap; }
+    .comm-dot  { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
 
     /* Tooltip */
     #tooltip {
@@ -765,11 +766,23 @@ function setMode(mode) {
 
 function buildCommLegend() {
   const el = document.getElementById('comm-legend');
-  el.innerHTML =
-    COMM_PALETTE.slice(0, numCommunities).map(c =>
-      `<div class="comm-dot" style="background:${c}"></div>`
-    ).join('') +
-    `<span style="color:#555;font-size:.72rem;margin-left:.3rem">${numCommunities} communities</span>`;
+
+  // Find the highest in-degree node per community — that's the community's "face"
+  const topByComm = {};
+  allNodes.forEach(n => {
+    const c = n.community;
+    if (!topByComm[c] || n.in_deg > topByComm[c].in_deg) topByComm[c] = n;
+  });
+
+  const ids = Object.keys(topByComm).map(Number).sort((a, b) => a - b);
+  el.innerHTML = ids.map(c => {
+    const top = topByComm[c];
+    const color = COMM_PALETTE[c % COMM_PALETTE.length];
+    const label = top.name.replace(/\s*\(.*\)/, '').trim();
+    return `<div class="comm-item">
+      <div class="comm-dot" style="background:${color}"></div>${label}
+    </div>`;
+  }).join('');
 }
 </script>
 
