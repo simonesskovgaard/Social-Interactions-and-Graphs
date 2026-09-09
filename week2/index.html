@@ -97,6 +97,10 @@
     .cmp-table tr:last-child td { border-bottom:none; }
     .cmp-table .real { color:#e63946; font-weight:700; }
     .cmp-table .null { color:#457b9d; font-weight:600; }
+    .cmp-table .zscore { color:#e9c46a; font-weight:700; }
+    .cmp-table .pval { color:#888; font-weight:600; }
+    .cmp-table .zscore.high { color:#2a9d8f; }
+    .cmp-table .zscore.extreme { color:#e63946; }
 
     /* ── INTERACTIVE SECTION ── */
     #interactive-wrap {
@@ -358,12 +362,27 @@
 
   <table class="cmp-table" id="comparison-table">
     <thead>
-      <tr><th>Metric</th><th>Real network</th><th>Null model (mean ± std)</th></tr>
+      <tr><th>Metric</th><th>Real network</th><th>Null model (mean ± std)</th><th>z-score</th><th>p-value</th></tr>
     </thead>
     <tbody id="cmp-body">
-      <tr><td colspan="3" style="color:#555">Loading data...</td></tr>
+      <tr><td colspan="5" style="color:#555">Loading data...</td></tr>
     </tbody>
   </table>
+
+  <h2>Statistical significance</h2>
+  <p>
+    A <strong>z-score</strong> measures how many standard deviations the real value lies from the
+    null model mean. Anything above 2 is conventionally "significant" &mdash; the real value
+    is unlikely to arise by chance. An <strong>empirical p-value</strong> of 0 means not a single
+    null model run matched or exceeded the real value.
+  </p>
+  <p>
+    Clustering (z&nbsp;&asymp;&nbsp;<strong id="z-clust">—</strong>) and triangles (z&nbsp;&asymp;&nbsp;<strong id="z-tri">—</strong>)
+    are massively significant: the real network has far more local structure than any
+    degree-preserving random graph could produce. Assortativity, path length, and modularity
+    are also significant, confirming that the wiring pattern is not a side-effect of
+    the degree sequence.
+  </p>
 
   <h2>Top connected rappers</h2>
   <p>
@@ -387,6 +406,65 @@
     <svg id="degdist-svg" style="width:100%;height:360px;display:block;background:#0d0d0d"></svg>
     <figcaption>Degree distribution (in and out). The heavy tail is a hallmark of real-world networks.</figcaption>
   </div>
+
+  <h2>Is it scale-free?</h2>
+  <p>
+    A <strong>complementary cumulative distribution function (CCDF)</strong> plots
+    P(K&nbsp;&ge;&nbsp;k) on log-log axes. If the degree distribution follows a power law,
+    the CCDF should appear as a straight line. We compare the rapper network's in-degree
+    CCDF (red) against a Barab&aacute;si-Albert (BA) model with the same N and average degree (blue).
+  </p>
+  <p>
+    The CCDF avoids the binning artefacts of histograms and makes heavy tails more visible.
+    On a log-log plot, a power-law tail appears as a straight line with slope &minus;(&alpha;&minus;1).
+    With only 254 nodes, finite-size effects blur the tail, so we shouldn't over-interpret the
+    exact exponent.
+  </p>
+
+  <div class="figure" id="fig-ccdf">
+    <svg id="ccdf-svg" style="width:100%;height:380px;display:block;background:#0d0d0d"></svg>
+    <figcaption>In-degree CCDF on log-log axes. Red = rapper network, blue = BA model (same N, same avg degree).</figcaption>
+  </div>
+
+  <h2>Local clustering</h2>
+  <p>
+    The <strong>local clustering coefficient</strong> C<sub>i</sub> of a node measures the
+    fraction of its neighbors that are also connected to each other. The histogram below shows
+    the distribution across all nodes.
+  </p>
+  <p>
+    Most nodes have C<sub>i</sub>&nbsp;=&nbsp;0 (degree&nbsp;&le;&nbsp;1, so no triangles are possible).
+    Among those with neighbors, the distribution is right-skewed: a few nodes sit in
+    densely interconnected neighborhoods. The mean local clustering (<strong id="lc-mean">—</strong>)
+    differs from the global transitivity (<strong id="lc-trans">—</strong>) because
+    transitivity weights by triplets while the mean weights each node equally.
+  </p>
+
+  <div class="figure" id="fig-local-clust">
+    <svg id="localclust-svg" style="width:100%;height:360px;display:block;background:#0d0d0d"></svg>
+    <figcaption>Distribution of local clustering coefficients C<sub>i</sub> across all 254 nodes.</figcaption>
+  </div>
+
+  <h2>Small-world signature</h2>
+  <p>
+    A <strong>small-world network</strong> has clustering much higher than a random graph of the
+    same size, while maintaining a comparably short average path length. The classic way to test
+    this is with a <strong>Watts-Strogatz sweep</strong>: we generate ring-lattice graphs with
+    the same N and average degree, then increase the rewiring probability q from 0 (regular lattice)
+    to 1 (random graph).
+  </p>
+  <p>
+    The plot below shows normalized clustering C(q)/C(0) and normalized path length L(q)/L(0)
+    as q increases. The "sweet spot" of small-world networks is where L has already dropped
+    but C remains high. The rapper network's position is marked with a diamond.
+  </p>
+
+  <div class="figure" id="fig-ws-sweep">
+    <svg id="ws-svg" style="width:100%;height:380px;display:block;background:#0d0d0d"></svg>
+    <figcaption>Watts-Strogatz sweep: normalized clustering (red) and path length (blue) vs rewiring probability q. Diamond = rapper network.</figcaption>
+  </div>
+
+  <p id="ws-verdict"></p>
 
   <h2>See it for yourself</h2>
   <p>
@@ -520,6 +598,9 @@ Promise.all([
   fillComparison(charts);
   drawTopNodes(charts.top_nodes);
   drawDegDist(charts.degree_dist);
+  if (charts.ccdf) drawCCDF(charts.ccdf);
+  if (charts.local_clustering) drawLocalClustering(charts.local_clustering);
+  if (charts.ws_sweep) drawWSSweep(charts.ws_sweep);
   initNetwork(net);
   initMetricBars(charts);
   initScrollReveal();
@@ -549,21 +630,35 @@ function fillComparison(charts) {
   const r = charts.comparison.real;
   const nm = charts.comparison.null_mean;
   const ns = charts.comparison.null_std;
+  const zs = charts.comparison.z_scores || {};
+  const pv = charts.comparison.p_values || {};
   const rows = [
-    ['Clustering (transitivity)', r.clustering, nm.clustering, ns.clustering],
-    ['Triangles', r.triangles, nm.triangles, ns.triangles],
-    ['Assortativity', r.assortativity, nm.assortativity, ns.assortativity],
-    ['Avg path length (GCC)', r.avg_path, nm.avg_path, ns.avg_path],
-    ['Modularity', r.modularity, nm.modularity, ns.modularity],
-    ['Friendship paradox', r.friendship_paradox, nm.friendship_paradox, ns.friendship_paradox],
+    ['Clustering (transitivity)', r.clustering, nm.clustering, ns.clustering, 'clustering'],
+    ['Triangles', r.triangles, nm.triangles, ns.triangles, 'triangles'],
+    ['Assortativity', r.assortativity, nm.assortativity, ns.assortativity, 'assortativity'],
+    ['Avg path length (GCC)', r.avg_path, nm.avg_path, ns.avg_path, 'avg_path'],
+    ['Modularity', r.modularity, nm.modularity, ns.modularity, 'modularity'],
+    ['Friendship paradox', r.friendship_paradox, nm.friendship_paradox, ns.friendship_paradox, 'friendship_paradox'],
   ];
   const tbody = document.getElementById('cmp-body');
-  tbody.innerHTML = rows.map(([label, rv, nv, nstd]) => {
+  tbody.innerHTML = rows.map(([label, rv, nv, nstd, key]) => {
     const fmtR = typeof rv === 'number' ? (Number.isInteger(rv) ? rv.toLocaleString() : rv.toFixed(4)) : rv;
     const fmtN = typeof nv === 'number' ? (Number.isInteger(nv) ? nv.toLocaleString() : nv.toFixed(4)) : nv;
     const fmtS = typeof nstd === 'number' ? nstd.toFixed(4) : nstd;
-    return `<tr><td>${label}</td><td class="real">${fmtR}</td><td class="null">${fmtN} ± ${fmtS}</td></tr>`;
+    const z = zs[key];
+    const p = pv[key];
+    const absZ = z != null ? Math.abs(z) : 0;
+    const zClass = absZ >= 10 ? 'zscore extreme' : absZ >= 2 ? 'zscore high' : 'zscore';
+    const fmtZ = z != null ? (z > 0 ? '+' : '') + z.toFixed(2) : '—';
+    const fmtP = p != null ? (p === 0 ? '<0.05' : p.toFixed(3)) : '—';
+    return `<tr><td>${label}</td><td class="real">${fmtR}</td><td class="null">${fmtN} ± ${fmtS}</td><td class="${zClass}">${fmtZ}</td><td class="pval">${fmtP}</td></tr>`;
   }).join('');
+
+  // Fill z-score callout values
+  const zClust = document.getElementById('z-clust');
+  const zTri = document.getElementById('z-tri');
+  if (zClust && zs.clustering != null) zClust.textContent = zs.clustering.toFixed(1);
+  if (zTri && zs.triangles != null) zTri.textContent = zs.triangles.toFixed(1);
 }
 
 // ── Top nodes bar chart ─────────────────────────────────
@@ -656,6 +751,232 @@ function drawDegDist(dist) {
   lg.append('text').attr('x',16).attr('y',10).attr('fill','#ccc').attr('font-size',10).text('In-degree');
   lg.append('circle').attr('cx',6).attr('cy',22).attr('r',4).attr('fill','#457b9d');
   lg.append('text').attr('x',16).attr('y',26).attr('fill','#ccc').attr('font-size',10).text('Out-degree');
+}
+
+// ── CCDF chart (log-log) ─────────────────────────────────
+function drawCCDF(ccdfData) {
+  const el = document.getElementById('ccdf-svg');
+  const W = el.clientWidth || 680, H = 380;
+  const m = {top:20, right:20, bottom:48, left:58};
+  const iW = W - m.left - m.right, iH = H - m.top - m.bottom;
+
+  const svg = d3.select('#ccdf-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  const rapper = ccdfData.rapper.filter(d => d.k > 0 && d.ccdf > 0);
+  const ba = ccdfData.ba_model.filter(d => d.k > 0 && d.ccdf > 0);
+
+  const xMin = 1, xMax = d3.max([...rapper, ...ba], d => d.k);
+  const yMin = d3.min([...rapper, ...ba], d => d.ccdf);
+
+  const x = d3.scaleLog().domain([xMin, xMax * 1.1]).range([0, iW]);
+  const y = d3.scaleLog().domain([yMin * 0.5, 1]).range([iH, 0]);
+
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(6, '~s').tickSize(-iH))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('.tick line').attr('stroke','#1e1e1e'))
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+  g.append('g')
+    .call(d3.axisLeft(y).ticks(6, '.0e').tickSize(-iW))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('.tick line').attr('stroke','#1e1e1e'))
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+
+  g.append('text').attr('x',iW/2).attr('y',iH+40).attr('text-anchor','middle')
+    .attr('fill','#666').attr('font-size',11).text('In-degree k (log)');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-44)
+    .attr('text-anchor','middle').attr('fill','#666').attr('font-size',11).text('P(K ≥ k)');
+
+  // Lines
+  const line = d3.line().x(d => x(d.k)).y(d => y(d.ccdf));
+
+  g.append('path').datum(rapper)
+    .attr('fill','none').attr('stroke','#e63946').attr('stroke-width',2)
+    .attr('d', line);
+  g.append('path').datum(ba)
+    .attr('fill','none').attr('stroke','#457b9d').attr('stroke-width',2)
+    .attr('stroke-dasharray','4,3').attr('d', line);
+
+  // Points
+  g.selectAll('circle.rapper').data(rapper).enter().append('circle')
+    .attr('cx', d => x(d.k)).attr('cy', d => y(d.ccdf))
+    .attr('r',4).attr('fill','#e63946').attr('opacity',0.9)
+    .attr('stroke','#0d0d0d').attr('stroke-width',1)
+    .on('mousemove', (e,d) => showTT(e, `k=${d.k}, P(K≥k)=${d.ccdf.toFixed(4)}`))
+    .on('mouseleave', hideTT);
+  g.selectAll('circle.ba').data(ba).enter().append('circle')
+    .attr('cx', d => x(d.k)).attr('cy', d => y(d.ccdf))
+    .attr('r',3.5).attr('fill','#457b9d').attr('opacity',0.9)
+    .attr('stroke','#0d0d0d').attr('stroke-width',1)
+    .on('mousemove', (e,d) => showTT(e, `BA: k=${d.k}, P(K≥k)=${d.ccdf.toFixed(4)}`))
+    .on('mouseleave', hideTT);
+
+  // Legend
+  const lg = g.append('g').attr('transform',`translate(${iW-160},8)`);
+  lg.append('line').attr('x1',0).attr('y1',6).attr('x2',18).attr('y2',6)
+    .attr('stroke','#e63946').attr('stroke-width',2);
+  lg.append('text').attr('x',24).attr('y',10).attr('fill','#ccc').attr('font-size',10).text('Rapper CCDF');
+  lg.append('line').attr('x1',0).attr('y1',24).attr('x2',18).attr('y2',24)
+    .attr('stroke','#457b9d').attr('stroke-width',2).attr('stroke-dasharray','4,3');
+  lg.append('text').attr('x',24).attr('y',28).attr('fill','#ccc').attr('font-size',10).text('BA model');
+}
+
+// ── Local clustering histogram ───────────────────────────
+function drawLocalClustering(lcData) {
+  const el = document.getElementById('localclust-svg');
+  const W = el.clientWidth || 680, H = 360;
+  const m = {top:20, right:20, bottom:48, left:52};
+  const iW = W - m.left - m.right, iH = H - m.top - m.bottom;
+
+  const svg = d3.select('#localclust-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  const hist = lcData.histogram;
+  const x = d3.scaleLinear().domain([0, 1]).range([0, iW]);
+  const maxC = d3.max(hist, d => d.count);
+  const y = d3.scaleLinear().domain([0, maxC * 1.08]).range([iH, 0]);
+  const barW = iW / hist.length;
+
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(10).tickSize(4))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+  g.append('g')
+    .call(d3.axisLeft(y).ticks(6).tickSize(-iW))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('.tick line').attr('stroke','#1e1e1e'))
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+
+  g.append('text').attr('x',iW/2).attr('y',iH+40).attr('text-anchor','middle')
+    .attr('fill','#666').attr('font-size',11).text('Local clustering coefficient Cᵢ');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-38)
+    .attr('text-anchor','middle').attr('fill','#666').attr('font-size',11).text('Count');
+
+  g.selectAll('rect').data(hist).enter().append('rect')
+    .attr('x', d => x(d.bin_start) + 1)
+    .attr('y', iH)
+    .attr('width', Math.max(1, barW - 2))
+    .attr('height', 0)
+    .attr('fill','#e63946').attr('opacity',0.85).attr('rx',1)
+    .on('mousemove', (e,d) => showTT(e, `C ∈ [${d.bin_start.toFixed(2)}, ${d.bin_end.toFixed(2)}): ${d.count} nodes`))
+    .on('mouseleave', hideTT)
+    .transition().duration(600).delay((_,i) => i*25)
+    .attr('y', d => y(d.count))
+    .attr('height', d => iH - y(d.count));
+
+  // Mean line
+  g.append('line')
+    .attr('x1', x(lcData.mean_local)).attr('x2', x(lcData.mean_local))
+    .attr('y1', 0).attr('y2', iH)
+    .attr('stroke','#2a9d8f').attr('stroke-width',2).attr('stroke-dasharray','6,3');
+  g.append('text')
+    .attr('x', x(lcData.mean_local)+4).attr('y',14)
+    .attr('fill','#2a9d8f').attr('font-size',10)
+    .text(`mean = ${lcData.mean_local.toFixed(3)}`);
+
+  // Fill callout values
+  document.getElementById('lc-mean').textContent = lcData.mean_local.toFixed(4);
+  document.getElementById('lc-trans').textContent = lcData.transitivity.toFixed(4);
+}
+
+// ── Watts-Strogatz sweep ─────────────────────────────────
+function drawWSSweep(wsData) {
+  const el = document.getElementById('ws-svg');
+  const W = el.clientWidth || 680, H = 380;
+  const m = {top:20, right:20, bottom:48, left:58};
+  const iW = W - m.left - m.right, iH = H - m.top - m.bottom;
+
+  const svg = d3.select('#ws-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  const data = wsData.data;
+  const x = d3.scaleLog().domain([d3.min(data, d=>d.q), 1]).range([0, iW]);
+  const y = d3.scaleLinear().domain([0, 1.05]).range([iH, 0]);
+
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(5, '.0e').tickSize(-iH))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('.tick line').attr('stroke','#1e1e1e'))
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+  g.append('g')
+    .call(d3.axisLeft(y).ticks(6).tickSize(-iW))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('.tick line').attr('stroke','#1e1e1e'))
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+
+  g.append('text').attr('x',iW/2).attr('y',iH+40).attr('text-anchor','middle')
+    .attr('fill','#666').attr('font-size',11).text('Rewiring probability q (log)');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-44)
+    .attr('text-anchor','middle').attr('fill','#666').attr('font-size',11).text('Normalized value');
+
+  // Lines
+  const lineC = d3.line().x(d => x(d.q)).y(d => y(d.norm_clustering));
+  const lineL = d3.line().x(d => x(d.q)).y(d => y(d.norm_path));
+
+  g.append('path').datum(data)
+    .attr('fill','none').attr('stroke','#e63946').attr('stroke-width',2.5)
+    .attr('d', lineC);
+  g.append('path').datum(data)
+    .attr('fill','none').attr('stroke','#457b9d').attr('stroke-width',2.5)
+    .attr('d', lineL);
+
+  // Points
+  g.selectAll('circle.c').data(data).enter().append('circle')
+    .attr('cx', d => x(d.q)).attr('cy', d => y(d.norm_clustering))
+    .attr('r',3).attr('fill','#e63946').attr('opacity',0.8)
+    .on('mousemove', (e,d) => showTT(e, `q=${d.q.toExponential(2)}<br>C(q)/C(0)=${d.norm_clustering.toFixed(3)}`))
+    .on('mouseleave', hideTT);
+  g.selectAll('circle.l').data(data).enter().append('circle')
+    .attr('cx', d => x(d.q)).attr('cy', d => y(d.norm_path))
+    .attr('r',3).attr('fill','#457b9d').attr('opacity',0.8)
+    .on('mousemove', (e,d) => showTT(e, `q=${d.q.toExponential(2)}<br>L(q)/L(0)=${d.norm_path.toFixed(3)}`))
+    .on('mouseleave', hideTT);
+
+  // Mark rapper network position (diamond)
+  const rapC = wsData.rapper_norm_clustering;
+  const rapL = wsData.rapper_norm_path;
+  // Find the q where norm_clustering is closest to the rapper's value
+  const closestC = data.reduce((best, d) =>
+    Math.abs(d.norm_clustering - rapC) < Math.abs(best.norm_clustering - rapC) ? d : best
+  );
+
+  // Draw diamond markers for rapper network
+  const diamond = d3.symbol().type(d3.symbolDiamond).size(120);
+  g.append('path').attr('d', diamond())
+    .attr('transform', `translate(${x(closestC.q)},${y(rapC)})`)
+    .attr('fill','#e9c46a').attr('stroke','#fff').attr('stroke-width',1.5);
+  g.append('text')
+    .attr('x', x(closestC.q)+10).attr('y', y(rapC)+4)
+    .attr('fill','#e9c46a').attr('font-size',10).attr('font-weight',700)
+    .text('Rapper network');
+
+  // Legend
+  const lg = g.append('g').attr('transform',`translate(${iW-180},8)`);
+  lg.append('line').attr('x1',0).attr('y1',6).attr('x2',18).attr('y2',6)
+    .attr('stroke','#e63946').attr('stroke-width',2.5);
+  lg.append('text').attr('x',24).attr('y',10).attr('fill','#ccc').attr('font-size',10).text('C(q)/C(0)');
+  lg.append('line').attr('x1',0).attr('y1',24).attr('x2',18).attr('y2',24)
+    .attr('stroke','#457b9d').attr('stroke-width',2.5);
+  lg.append('text').attr('x',24).attr('y',28).attr('fill','#ccc').attr('font-size',10).text('L(q)/L(0)');
+
+  // Verdict text
+  const verdict = document.getElementById('ws-verdict');
+  if (verdict) {
+    const isSmallWorld = rapC > 0.1 && rapL < 0.5;
+    if (isSmallWorld) {
+      verdict.innerHTML = 'Our rapper network has normalized clustering of <strong style="color:#e63946">'
+        + rapC.toFixed(3) + '</strong> and normalized path length of <strong style="color:#457b9d">'
+        + rapL.toFixed(3) + '</strong>. Clustering is well above random while path length is short '
+        + '— this is consistent with a <strong>small-world</strong> signature, though the comparison '
+        + 'is approximate since the rapper network is sparse and not a ring lattice.';
+    } else {
+      verdict.innerHTML = 'Our rapper network has normalized clustering of <strong style="color:#e63946">'
+        + rapC.toFixed(3) + '</strong> and normalized path length of <strong style="color:#457b9d">'
+        + rapL.toFixed(3) + '</strong>. The network does not clearly sit in the small-world regime '
+        + 'of the Watts-Strogatz model, suggesting its structure differs from a rewired lattice.';
+    }
+  }
 }
 
 // ── Network visualization ───────────────────────────────

@@ -10,6 +10,7 @@ import networkx as nx
 import numpy as np
 from collections import Counter
 from pathlib import Path
+import warnings
 
 # ── CONFIG ──────────────────────────────────────────────
 API_URL = "https://en.wikipedia.org/w/api.php"
@@ -215,6 +216,98 @@ def assign_communities(G_und):
     return node_to_comm, len(comms)
 
 
+# ── STEP 7a: NEW DATA COMPUTATIONS ─────────────────────
+def compute_z_scores_and_pvalues(real_metrics, null_runs):
+    """Compute z-scores and empirical p-values from null model runs."""
+    keys = [k for k in real_metrics if k in null_runs[0]]
+    z_scores = {}
+    p_values = {}
+    for k in keys:
+        real_val = real_metrics[k]
+        null_vals = [r[k] for r in null_runs]
+        mu = np.mean(null_vals)
+        sigma = np.std(null_vals)
+        if sigma > 0:
+            z_scores[k] = round(float((real_val - mu) / sigma), 2)
+        else:
+            z_scores[k] = 0.0 if real_val == mu else float('inf')
+        # Empirical p-value: fraction of null runs where metric >= real value
+        p_values[k] = round(float(np.mean([1 if nv >= real_val else 0 for nv in null_vals])), 4)
+    return z_scores, p_values
+
+
+def compute_ccdf(degree_counts, N):
+    """Compute CCDF from a Counter of degrees. Returns sorted [{k, ccdf}]."""
+    ccdf = []
+    for k in sorted(degree_counts.keys()):
+        n_ge_k = sum(c for deg, c in degree_counts.items() if deg >= k)
+        ccdf.append({"k": k, "ccdf": round(n_ge_k / N, 6)})
+    return ccdf
+
+
+def compute_ba_ccdf(N, avg_degree):
+    """Generate a Barabási-Albert graph and compute its in-degree CCDF."""
+    m = max(1, round(avg_degree / 2))
+    ba = nx.barabasi_albert_graph(N, m, seed=42)
+    deg_counts = Counter(dict(ba.degree()).values())
+    return compute_ccdf(deg_counts, N)
+
+
+def compute_local_clustering_histogram(G_und, n_bins=20):
+    """Compute per-node clustering coefficients and bin into a histogram."""
+    clustering = nx.clustering(G_und)
+    values = list(clustering.values())
+    counts, bin_edges = np.histogram(values, bins=n_bins, range=(0, 1))
+    histogram = []
+    for i in range(len(counts)):
+        histogram.append({
+            "bin_start": round(float(bin_edges[i]), 4),
+            "bin_end": round(float(bin_edges[i + 1]), 4),
+            "count": int(counts[i])
+        })
+    mean_local = round(float(np.mean(values)), 4)
+    return histogram, mean_local, values
+
+
+def compute_ws_sweep(N, avg_degree, n_points=30, n_samples=5):
+    """Sweep Watts-Strogatz rewiring probability and compute normalized C and L."""
+    k = max(2, int(round(avg_degree)))
+    if k % 2 != 0:
+        k += 1  # WS requires even k
+
+    qs = np.logspace(-4, 0, n_points)
+    results = []
+
+    # Baseline: q=0 (regular lattice)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        g0 = nx.watts_strogatz_graph(N, k, 0, seed=42)
+        C0 = nx.transitivity(g0)
+        if nx.is_connected(g0):
+            L0 = nx.average_shortest_path_length(g0)
+        else:
+            gcc = g0.subgraph(max(nx.connected_components(g0), key=len))
+            L0 = nx.average_shortest_path_length(gcc)
+
+    for q in qs:
+        c_vals, l_vals = [], []
+        for s in range(n_samples):
+            ws = nx.watts_strogatz_graph(N, k, q, seed=42 + s)
+            c_vals.append(nx.transitivity(ws))
+            if nx.is_connected(ws):
+                l_vals.append(nx.average_shortest_path_length(ws))
+            else:
+                gcc = ws.subgraph(max(nx.connected_components(ws), key=len))
+                l_vals.append(nx.average_shortest_path_length(gcc))
+        results.append({
+            "q": round(float(q), 8),
+            "norm_clustering": round(float(np.mean(c_vals) / C0), 4) if C0 > 0 else 0,
+            "norm_path": round(float(np.mean(l_vals) / L0), 4) if L0 > 0 else 0,
+        })
+
+    return results, C0, L0
+
+
 # ── STEP 7: EXPORT JSON ────────────────────────────────
 def export_json(G, G_und, real_metrics, null_runs, output_dir):
     """Export network.json and charts.json for the Week 2 article."""
@@ -253,9 +346,36 @@ def export_json(G, G_und, real_metrics, null_runs, output_dir):
     null_mean = {k: round(float(np.mean([r[k] for r in null_runs])), 4) for k in null_keys}
     null_std = {k: round(float(np.std([r[k] for r in null_runs])), 4) for k in null_keys}
 
+    # Z-scores and p-values
+    z_scores, p_values = compute_z_scores_and_pvalues(real_metrics, null_runs)
+    print(f"Z-scores: {json.dumps(z_scores, indent=2)}")
+
     # Degree distribution
     in_counts = Counter(in_deg.values())
     out_counts = Counter(out_deg.values())
+
+    # CCDF of in-degree
+    N = G.number_of_nodes()
+    in_ccdf = compute_ccdf(in_counts, N)
+    avg_deg = 2 * G_und.number_of_edges() / N
+    ba_ccdf = compute_ba_ccdf(N, avg_deg)
+    print(f"CCDF: {len(in_ccdf)} points, BA CCDF: {len(ba_ccdf)} points")
+
+    # Local clustering distribution
+    local_clust_hist, mean_local_clustering, local_clust_values = \
+        compute_local_clustering_histogram(G_und)
+    print(f"Local clustering: mean={mean_local_clustering}, "
+          f"transitivity={real_metrics['clustering']}")
+
+    # Watts-Strogatz sweep
+    print("Computing Watts-Strogatz sweep (this may take a moment)...")
+    ws_sweep, ws_C0, ws_L0 = compute_ws_sweep(N, avg_deg)
+
+    # Where does the rapper network fall on the WS plot?
+    # Compute normalized clustering and path for rapper network
+    rapper_norm_C = round(real_metrics["clustering"] / ws_C0, 4) if ws_C0 > 0 else 0
+    rapper_norm_L = round(real_metrics["avg_path"] / ws_L0, 4) if ws_L0 > 0 else 0
+    print(f"Rapper network: norm_C={rapper_norm_C}, norm_L={rapper_norm_L}")
 
     # Top nodes by in-degree
     top_in = sorted(nodes, key=lambda x: x["in_deg"], reverse=True)[:15]
@@ -265,19 +385,37 @@ def export_json(G, G_und, real_metrics, null_runs, output_dir):
             "real": real_metrics,
             "null_mean": null_mean,
             "null_std": null_std,
-            "null_runs": null_runs
+            "null_runs": null_runs,
+            "z_scores": z_scores,
+            "p_values": p_values,
         },
         "degree_dist": {
             "in": [{"deg": k, "count": v} for k, v in sorted(in_counts.items())],
             "out": [{"deg": k, "count": v} for k, v in sorted(out_counts.items())]
         },
+        "ccdf": {
+            "rapper": in_ccdf,
+            "ba_model": ba_ccdf,
+        },
+        "local_clustering": {
+            "histogram": local_clust_hist,
+            "mean_local": mean_local_clustering,
+            "transitivity": real_metrics["clustering"],
+        },
+        "ws_sweep": {
+            "data": ws_sweep,
+            "rapper_norm_clustering": rapper_norm_C,
+            "rapper_norm_path": rapper_norm_L,
+            "ws_C0": round(ws_C0, 4),
+            "ws_L0": round(ws_L0, 4),
+        },
         "top_nodes": [{"name": n["name"], "in_deg": n["in_deg"], "out_deg": n["out_deg"]} for n in top_in],
         "network_stats": {
-            "n_nodes": G.number_of_nodes(),
+            "n_nodes": N,
             "n_edges": G.number_of_edges(),
             "n_undirected_edges": G_und.number_of_edges(),
             "density": round(nx.density(G_und), 4),
-            "avg_degree": round(2 * G_und.number_of_edges() / G_und.number_of_nodes(), 2)
+            "avg_degree": round(avg_deg, 2)
         }
     }
 
