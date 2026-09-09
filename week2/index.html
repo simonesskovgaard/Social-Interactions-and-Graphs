@@ -492,6 +492,7 @@
       <svg id="network-svg"></svg>
       <div id="ctrl">
         <button id="btn-shuffle" onclick="doShuffle()">Shuffle edges</button>
+        <button id="btn-reset" onclick="doReset()" style="background:#2a2a2a;color:#ccc;margin-top:.4rem;">Reset</button>
 
         <div style="font-size:.72rem;color:#666;letter-spacing:.5px;text-transform:uppercase;margin-top:.5rem;">Metric comparison</div>
 
@@ -1266,6 +1267,35 @@ function doShuffle() {
     gLinks.selectAll('line')
       .transition().duration(800).attr('stroke','#444');
   }, 600);
+}
+
+// ── Reset to original network ───────────────────────────
+function doReset() {
+  if (!NET || !CHARTS) return;
+  shuffleCount = 0;
+  document.getElementById('shuffle-count').textContent = '0';
+  document.getElementById('p-shuffles').textContent = '0';
+
+  // Rebuild adjacency list from original data
+  const nodes = simulation.nodes();
+  const links = NET.links.map(d => ({source: d.source, target: d.target}));
+  buildAdj(nodes.map(n => ({id: n.id})), links);
+
+  // Reset metric bars to null model mean
+  updateMetricBars(CHARTS.comparison.null_mean);
+
+  // Redraw original links
+  gLinks.selectAll('line').remove();
+  const linkObjs = links.map(l => ({
+    source: nodes.find(n => n.id === (l.source.id ?? l.source)) || l.source,
+    target: nodes.find(n => n.id === (l.target.id ?? l.target)) || l.target
+  }));
+  gLinks.selectAll('line').data(linkObjs).enter().append('line')
+    .attr('stroke','#444').attr('stroke-width',0.6).attr('stroke-opacity',0.3);
+
+  // Update simulation
+  simulation.force('link').links(linkObjs);
+  simulation.alpha(0.3).restart();
 }
 
 // ── Scroll reveal ───────────────────────────────────────
