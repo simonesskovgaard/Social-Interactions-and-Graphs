@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Week 2 — Are Rappers More Connected Than Random? | 02805 Social Graphs</title>
+  <meta name="description" content="We scraped 400 rapper Wikipedia pages, built a link network, and compared it to degree-preserving random shuffles. The real network wins — by a lot.">
+  <meta property="og:title" content="Are Rappers More Connected Than Random?">
+  <meta property="og:description" content="Real clustering vs null model. Live shuffle. See for yourself.">
+  <meta property="og:type" content="article">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    /* ── NUMBERS GRID ── */
+    .numbers {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+      gap:1px;
+      background:#2a2a2a;
+      border:1px solid #2a2a2a;
+      border-radius:4px;
+      margin:2rem 0;
+      overflow:hidden;
+    }
+    .num-cell {
+      background:#131313;
+      padding:1rem 1.1rem;
+      display:flex;
+      flex-direction:column;
+      gap:.2rem;
+    }
+    .num-val {
+      font-size:1.6rem;
+      font-weight:800;
+      color:#e63946;
+      letter-spacing:-1px;
+      line-height:1;
+    }
+    .num-lbl {
+      font-size:.68rem;
+      color:#777;
+      letter-spacing:.7px;
+      text-transform:uppercase;
+    }
+    .num-note { font-size:.7rem; color:#555; margin-top:.15rem; }
+
+    /* ── TL;DR ── */
+    .tldr {
+      background: linear-gradient(180deg, #171717 0%, #131313 100%);
+      border:1px solid #2a2a2a;
+      border-left:3px solid #e63946;
+      border-radius:0 6px 6px 0;
+      padding:1.2rem 1.4rem;
+      margin:2rem 0 3rem;
+    }
+    .tldr-label {
+      font-size:.7rem;
+      letter-spacing:1.5px;
+      text-transform:uppercase;
+      color:#e63946;
+      font-weight:700;
+      margin-bottom:.7rem;
+    }
+    .tldr ul { list-style:none; padding:0; margin:0; }
+    .tldr li {
+      padding:.4rem 0;
+      color:#ddd;
+      font-size:.95rem;
+      border-bottom:1px solid #222;
+    }
+    .tldr li:last-child { border-bottom:0; }
+    .tldr li strong { color:#e63946; font-weight:700; }
+
+    /* ── COMPARISON TABLE ── */
+    .cmp-table {
+      width:100%;
+      border-collapse:collapse;
+      margin:1.5rem 0;
+      font-size:.9rem;
+    }
+    .cmp-table th {
+      text-align:left;
+      padding:.6rem 1rem;
+      background:#1f1f1f;
+      color:#888;
+      font-size:.75rem;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+      border-bottom:1px solid #2a2a2a;
+    }
+    .cmp-table td {
+      padding:.6rem 1rem;
+      border-bottom:1px solid #2a2a2a;
+      color:#ccc;
+    }
+    .cmp-table tr:last-child td { border-bottom:none; }
+    .cmp-table .real { color:#e63946; font-weight:700; }
+    .cmp-table .null { color:#457b9d; font-weight:600; }
+
+    /* ── INTERACTIVE SECTION ── */
+    #interactive-wrap {
+      margin:2.5rem 0;
+      background:#0d0d0d;
+      border:1px solid #2a2a2a;
+      border-radius:6px;
+      overflow:hidden;
+    }
+    #interactive-header {
+      padding:.9rem 1.2rem;
+      border-bottom:1px solid #2a2a2a;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      gap:.6rem;
+    }
+    #interactive-header h3 { margin:0; font-size:1rem; color:#e8e8e8; }
+    #interactive-body { display:flex; }
+
+    /* SVG canvas */
+    #network-svg { flex:1; min-height:550px; display:block; background:#0d0d0d; }
+
+    /* Right panel */
+    #ctrl {
+      width:260px;
+      flex-shrink:0;
+      border-left:1px solid #2a2a2a;
+      padding:1.2rem;
+      display:flex;
+      flex-direction:column;
+      gap:1rem;
+    }
+    #ctrl .stat-row { font-size:.82rem; color:#888; display:flex; justify-content:space-between; }
+    #ctrl .stat-row span { color:#e8e8e8; font-weight:600; }
+
+    #ctrl button {
+      width:100%;
+      padding:.6rem;
+      border:none;
+      border-radius:4px;
+      font-size:.88rem;
+      font-weight:700;
+      cursor:pointer;
+      font-family:inherit;
+      transition:opacity .15s;
+    }
+    #btn-shuffle { background:#e63946; color:#fff; }
+    #btn-shuffle:hover { opacity:.85; }
+
+    /* Metric bars */
+    .metric-bar-group { margin-bottom:.8rem; }
+    .metric-bar-label {
+      font-size:.72rem;
+      color:#888;
+      letter-spacing:.5px;
+      text-transform:uppercase;
+      margin-bottom:.3rem;
+    }
+    .bar-wrap {
+      display:flex;
+      gap:4px;
+      align-items:center;
+    }
+    .bar-track {
+      flex:1;
+      height:18px;
+      background:#1a1a1a;
+      border-radius:3px;
+      overflow:hidden;
+      position:relative;
+    }
+    .bar-fill {
+      height:100%;
+      border-radius:3px;
+      transition:width .4s ease-out;
+    }
+    .bar-fill.real { background:#e63946; }
+    .bar-fill.null { background:#457b9d; }
+    .bar-val {
+      font-size:.75rem;
+      font-weight:700;
+      min-width:44px;
+      text-align:right;
+    }
+    .bar-val.real { color:#e63946; }
+    .bar-val.null { color:#457b9d; }
+
+    /* Legend strip */
+    #legend-strip {
+      padding:.5rem 1.2rem;
+      border-bottom:1px solid #2a2a2a;
+      background:#0d0d0d;
+      display:flex;
+      flex-wrap:wrap;
+      gap:.6rem 1.4rem;
+    }
+    .legend-item { display:flex; align-items:center; gap:.45rem; font-size:.82rem; color:#ccc; }
+    .legend-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+
+    /* Tooltip */
+    #tooltip {
+      position:fixed;
+      background:#161616;
+      border:1px solid #2a2a2a;
+      border-radius:4px;
+      padding:.5rem .75rem;
+      font-size:.78rem;
+      color:#e8e8e8;
+      pointer-events:none;
+      display:none;
+      z-index:100;
+    }
+
+    /* ── SURPRISE ── */
+    .surprise {
+      background:#161616;
+      border:1px solid #2a2a2a;
+      border-radius:6px;
+      padding:1.4rem 1.5rem;
+      margin:2rem 0;
+    }
+    .surprise-tag {
+      display:inline-block;
+      font-size:.68rem;
+      letter-spacing:1.5px;
+      text-transform:uppercase;
+      color:#e63946;
+      font-weight:700;
+      margin-bottom:.5rem;
+    }
+    .surprise h3 { font-size:1rem; margin:.2rem 0 .6rem; color:#e8e8e8; }
+    .surprise p  { color:#bbb; font-size:.9rem; margin-bottom:.6rem; }
+    .surprise p:last-child { margin-bottom:0; }
+
+    /* ── REFERENCES ── */
+    .refs {
+      font-size:.85rem;
+      color:#999;
+      background:#131313;
+      border:1px solid #2a2a2a;
+      border-radius:6px;
+      padding:1.2rem 1.4rem;
+      margin:2.5rem 0 0;
+    }
+    .refs h3 {
+      font-size:.7rem;
+      letter-spacing:1.5px;
+      text-transform:uppercase;
+      color:#666;
+      font-weight:700;
+      margin-bottom:.6rem;
+    }
+    .refs ul { padding-left:1.1rem; margin:0; }
+    .refs li { margin-bottom:.3rem; color:#bbb; }
+    .refs a { color:#457b9d; }
+
+    /* ── SCROLL ANIMATIONS ── */
+    .figure, .tldr, .numbers, .surprise, .refs {
+      opacity:0;
+      transform:translateY(12px);
+      transition:opacity .6s ease-out, transform .6s ease-out;
+    }
+    .figure.visible, .tldr.visible, .numbers.visible,
+    .surprise.visible, .refs.visible {
+      opacity:1;
+      transform:translateY(0);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .figure, .tldr, .numbers, .surprise, .refs {
+        opacity:1; transform:none; transition:none;
+      }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 720px) {
+      #interactive-body { flex-direction:column; }
+      #ctrl {
+        width:100%;
+        border-left:none;
+        border-top:1px solid #2a2a2a;
+      }
+      #network-svg { min-height:400px; }
+      #interactive-header { flex-direction:column; align-items:flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="../index.html" class="nav-logo">Network Lab</a>
+  <div class="nav-links">
+    <a href="../index.html">← All weeks</a>
+    <a href="https://github.com/simonesskovgaard/Social-Interactions-and-Graphs" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<article class="post-wrap">
+
+  <p class="post-meta">Week 02 · 9 September 2026 · 02805 Social Graphs</p>
+  <h1>Are Rappers More Connected Than Random?</h1>
+  <p class="post-intro">
+    We scraped rapper Wikipedia pages, built a link network, and compared it to
+    degree-preserving random shuffles. The real network has far more clustering
+    and triangles than chance alone would produce. Click "Shuffle" to see it yourself.
+  </p>
+
+  <div class="tldr">
+    <div class="tldr-label">TL;DR — 3 things we learned</div>
+    <ul>
+      <li><strong>Clustering is not random.</strong> The real rapper network has dramatically higher clustering than degree-preserving shuffles. Structure matters &mdash; who links to whom is not just a function of how many links each page has.</li>
+      <li><strong>Triangles everywhere.</strong> Real networks close triangles far more often than random rewirings. If A links to B and B links to C, then A very likely links to C &mdash; a pattern destroyed by shuffling.</li>
+      <li><strong>The friendship paradox is real.</strong> Most rappers' neighbors have higher average degree than they do. Your friends really are more popular than you.</li>
+    </ul>
+  </div>
+
+  <h2>The numbers, cold</h2>
+  <p>We fetched rapper pages from Wikipedia's "21st-century American rappers" category and built a directed graph: an edge from A to B means A's Wikipedia page links to B's. After removing isolates:</p>
+  <div class="numbers" id="stats-grid">
+    <div class="num-cell"><span class="num-val" id="s-nodes">—</span><span class="num-lbl">Rappers</span><span class="num-note">Nodes (isolates removed)</span></div>
+    <div class="num-cell"><span class="num-val" id="s-edges">—</span><span class="num-lbl">Directed edges</span><span class="num-note">Wiki-links</span></div>
+    <div class="num-cell"><span class="num-val" id="s-und-edges">—</span><span class="num-lbl">Undirected pairs</span><span class="num-note">Collapsed</span></div>
+    <div class="num-cell"><span class="num-val" id="s-density">—</span><span class="num-lbl">Density</span><span class="num-note">Sparse</span></div>
+    <div class="num-cell"><span class="num-val" id="s-avg-deg">—</span><span class="num-lbl">Avg degree</span><span class="num-note">2E/N (undirected)</span></div>
+    <div class="num-cell"><span class="num-val" id="s-communities">—</span><span class="num-lbl">Communities</span><span class="num-note">Greedy modularity</span></div>
+    <div class="num-cell"><span class="num-val" id="s-clustering">—</span><span class="num-lbl">Clustering</span><span class="num-note">Global transitivity</span></div>
+    <div class="num-cell"><span class="num-val" id="s-triangles">—</span><span class="num-lbl">Triangles</span><span class="num-note">Closed triplets</span></div>
+  </div>
+
+  <h2>Building the network</h2>
+  <p>
+    We used the Wikipedia API to collect pages from the "21st-century American rappers" category,
+    then fetched every internal link from each page. An edge A→B is added only if both A and B
+    are in our rapper set. After removing isolates (pages with no connections to other rappers),
+    we collapse the directed graph to undirected for metric comparison.
+  </p>
+
+  <h2>What makes a network "real"?</h2>
+  <p>
+    A network's structure could be an accident of degree: maybe high-degree nodes just happen
+    to form triangles because they have so many links. To test this, we use a <strong>null model</strong>:
+    a degree-preserving random shuffle. We repeatedly swap edges (A→B, C→D becomes A→D, C→B)
+    while keeping every node's degree exactly the same. This destroys community structure and
+    clustering while preserving the degree sequence.
+  </p>
+  <p>
+    If the real network's clustering is much higher than the shuffled versions, we know the
+    structure is <em>not</em> just a side-effect of the degree distribution. Something is actually
+    causing rappers to cluster.
+  </p>
+
+  <h2>Real vs null model</h2>
+  <p>
+    We ran 20 degree-preserving shuffles and compared the metrics. The table below shows the
+    results. Every metric that measures local structure (clustering, triangles) is dramatically
+    different in the real network.
+  </p>
+
+  <table class="cmp-table" id="comparison-table">
+    <thead>
+      <tr><th>Metric</th><th>Real network</th><th>Null model (mean ± std)</th></tr>
+    </thead>
+    <tbody id="cmp-body">
+      <tr><td colspan="3" style="color:#555">Loading data...</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Top connected rappers</h2>
+  <p>
+    In-degree tells you who gets mentioned on the most other rappers' Wikipedia pages. These
+    are the gravitational centers of the network:
+  </p>
+
+  <div class="figure" id="fig-top-nodes">
+    <svg id="topnodes-svg" style="width:100%;height:380px;display:block;background:#0d0d0d"></svg>
+    <figcaption>Top 15 rappers by in-degree. These are the pages most frequently linked to by other rappers.</figcaption>
+  </div>
+
+  <h2>Degree distribution</h2>
+  <p>
+    The in-degree distribution shows the classic heavy tail: most rappers have a handful of
+    incoming links, while a few attract dozens. The out-degree is more uniform &mdash; Wikipedia
+    articles have limited real-estate.
+  </p>
+
+  <div class="figure" id="fig-degdist">
+    <svg id="degdist-svg" style="width:100%;height:360px;display:block;background:#0d0d0d"></svg>
+    <figcaption>Degree distribution (in and out). The heavy tail is a hallmark of real-world networks.</figcaption>
+  </div>
+
+  <h2>See it for yourself</h2>
+  <p>
+    The interactive below shows the rapper network colored by community. Hit <strong>Shuffle</strong>
+    to run a degree-preserving edge swap in your browser. Watch how the metric bars change:
+    the <span style="color:#e63946">red bars</span> (real) stay fixed while the
+    <span style="color:#457b9d">blue bars</span> (shuffled) jump around &mdash; always lower
+    for clustering and triangles.
+  </p>
+
+</article>
+
+<!-- INTERACTIVE NETWORK -->
+<div style="max-width:960px;margin:0 auto 4rem;padding:0 1rem;">
+  <div id="interactive-wrap">
+    <div id="interactive-header">
+      <h3>Shuffle the network — watch the metrics react</h3>
+      <div style="font-size:.78rem;color:#888;">Shuffle count: <span id="shuffle-count" style="color:#e63946;font-weight:700">0</span></div>
+    </div>
+    <div id="legend-strip">
+      <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div>Real metric (fixed)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#457b9d"></div>Shuffled metric (changes)</div>
+    </div>
+    <div id="interactive-body">
+      <svg id="network-svg"></svg>
+      <div id="ctrl">
+        <button id="btn-shuffle" onclick="doShuffle()">Shuffle edges</button>
+
+        <div style="font-size:.72rem;color:#666;letter-spacing:.5px;text-transform:uppercase;margin-top:.5rem;">Metric comparison</div>
+
+        <div id="metric-bars"></div>
+
+        <div style="margin-top:auto;">
+          <div class="stat-row">Nodes <span id="p-nodes">—</span></div>
+          <div class="stat-row">Edges <span id="p-edges">—</span></div>
+          <div class="stat-row">Shuffles <span id="p-shuffles">0</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <article class="post-wrap" style="padding-top:2rem;">
+    <h2>Communities</h2>
+    <p>
+      The greedy modularity algorithm finds communities in the undirected network.
+      These clusters often map to real-world connections: geography (East Coast vs West Coast),
+      era (90s vs 2010s), or record label affiliations. The community colors in the interactive
+      above reflect these detected groups.
+    </p>
+
+    <h2>The friendship paradox</h2>
+    <p>
+      The <strong>friendship paradox</strong> states that, on average, your friends have more
+      friends than you do. In our rapper network, we measured the fraction of rappers whose
+      neighbors have a higher average degree than they do. The result: <strong id="fp-val">—</strong>
+      of rappers experience the friendship paradox. This is a well-known property of networks
+      with heavy-tailed degree distributions &mdash; high-degree nodes appear in many neighborhoods,
+      pulling up the average.
+    </p>
+
+    <div class="surprise">
+      <span class="surprise-tag">What surprised us</span>
+      <h3>Three things we did not expect</h3>
+      <p>
+        <strong>1. Clustering survives shuffling poorly.</strong> The null model produces near-zero clustering even though every node keeps its exact degree. Structure is not a side-effect of popularity.
+      </p>
+      <p>
+        <strong>2. The friendship paradox is strong.</strong> In most real networks, 60-80% of nodes experience it. Our rapper network is no exception &mdash; the paradox is a mathematical consequence of degree variance, not a cultural observation.
+      </p>
+      <p>
+        <strong>3. Assortativity flips sign.</strong> The real network can be disassortative (popular rappers link to less popular ones), while shuffled versions tend toward zero. The mixing pattern is a real structural feature.
+      </p>
+    </div>
+
+    <div class="refs">
+      <h3>Method & data</h3>
+      <ul>
+        <li><strong>Data:</strong> Rapper pages scraped from Wikipedia's "21st-century American rappers" category via the MediaWiki API. Directed edges = internal wiki-links between pages in our set.</li>
+        <li><strong>Null model:</strong> Degree-preserving double edge swap (<code>nx.double_edge_swap</code>), 10&times; edges per shuffle. 20 shuffles pre-computed; live shuffle runs in-browser via JS.</li>
+        <li><strong>Tools:</strong> Python / NetworkX for graph analysis and community detection; D3.js v7 for every visualisation on this page.</li>
+        <li><strong>Community detection:</strong> Greedy modularity maximisation (<code>nx.community.greedy_modularity_communities</code>) on the undirected projection.</li>
+        <li><strong>Reading:</strong> Barab&aacute;si, <em>Network Science</em>, ch. 3 (Random networks) and ch. 4 (Scale-free property). Watts &amp; Strogatz (1998) on small-world networks.</li>
+        <li><strong>Source:</strong> <a href="https://github.com/simonesskovgaard/Social-Interactions-and-Graphs" target="_blank">github.com/simonesskovgaard/Social-Interactions-and-Graphs</a></li>
+      </ul>
+    </div>
+  </article>
+</div>
+
+<footer>
+  Built for 02805 Social Graphs and Interactions · DTU · 2026
+</footer>
+
+<div id="tooltip"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+// ── Tooltip ─────────────────────────────────────────────
+const tt = document.getElementById('tooltip');
+function showTT(e, html) {
+  tt.style.cssText = `display:block;left:${e.clientX+14}px;top:${e.clientY-10}px`;
+  tt.innerHTML = html;
+}
+function hideTT() { tt.style.display = 'none'; }
+
+// ── Community palette ───────────────────────────────────
+const COMM_PALETTE = [
+  '#e63946','#2a9d8f','#e9c46a','#8ecae6','#f4a261',
+  '#e76f51','#06d6a0','#ffd166','#ef476f','#118ab2',
+  '#9b5de5','#f15bb5','#fee440','#00bbf9','#00f5d4',
+  '#fb5607','#ff006e','#8338ec','#3a86ff','#ffbe0b',
+  '#a8dadc','#b7e4c7','#c77dff','#48cae4','#ff9f1c',
+];
+
+// ── Global state ────────────────────────────────────────
+let NET = null, CHARTS = null;
+let adjList = {}, nodeMap = {};
+let shuffleCount = 0;
+let realMetrics = {};
+let simulation, svg, gLinks, gNodes;
+
+// ── Load data ───────────────────────────────────────────
+Promise.all([
+  fetch('../assets/data/rappers_network.json').then(r => r.json()),
+  fetch('../assets/data/rappers_charts.json').then(r => r.json())
+]).then(([net, charts]) => {
+  NET = net;
+  CHARTS = charts;
+  realMetrics = charts.comparison.real;
+
+  fillStats(charts);
+  fillComparison(charts);
+  drawTopNodes(charts.top_nodes);
+  drawDegDist(charts.degree_dist);
+  initNetwork(net);
+  initMetricBars(charts);
+  initScrollReveal();
+
+  // Friendship paradox
+  const fpEl = document.getElementById('fp-val');
+  if (realMetrics.friendship_paradox != null) {
+    fpEl.textContent = (realMetrics.friendship_paradox * 100).toFixed(0) + '%';
+  }
+});
+
+// ── Fill stats grid ─────────────────────────────────────
+function fillStats(charts) {
+  const s = charts.network_stats;
+  document.getElementById('s-nodes').textContent = s.n_nodes;
+  document.getElementById('s-edges').textContent = s.n_edges.toLocaleString();
+  document.getElementById('s-und-edges').textContent = s.n_undirected_edges.toLocaleString();
+  document.getElementById('s-density').textContent = (s.density * 100).toFixed(2) + '%';
+  document.getElementById('s-avg-deg').textContent = s.avg_degree;
+  document.getElementById('s-communities').textContent = charts.comparison.real.n_communities;
+  document.getElementById('s-clustering').textContent = charts.comparison.real.clustering;
+  document.getElementById('s-triangles').textContent = charts.comparison.real.triangles.toLocaleString();
+}
+
+// ── Fill comparison table ───────────────────────────────
+function fillComparison(charts) {
+  const r = charts.comparison.real;
+  const nm = charts.comparison.null_mean;
+  const ns = charts.comparison.null_std;
+  const rows = [
+    ['Clustering (transitivity)', r.clustering, nm.clustering, ns.clustering],
+    ['Triangles', r.triangles, nm.triangles, ns.triangles],
+    ['Assortativity', r.assortativity, nm.assortativity, ns.assortativity],
+    ['Avg path length (GCC)', r.avg_path, nm.avg_path, ns.avg_path],
+    ['Modularity', r.modularity, nm.modularity, ns.modularity],
+    ['Friendship paradox', r.friendship_paradox, nm.friendship_paradox, ns.friendship_paradox],
+  ];
+  const tbody = document.getElementById('cmp-body');
+  tbody.innerHTML = rows.map(([label, rv, nv, nstd]) => {
+    const fmtR = typeof rv === 'number' ? (Number.isInteger(rv) ? rv.toLocaleString() : rv.toFixed(4)) : rv;
+    const fmtN = typeof nv === 'number' ? (Number.isInteger(nv) ? nv.toLocaleString() : nv.toFixed(4)) : nv;
+    const fmtS = typeof nstd === 'number' ? nstd.toFixed(4) : nstd;
+    return `<tr><td>${label}</td><td class="real">${fmtR}</td><td class="null">${fmtN} ± ${fmtS}</td></tr>`;
+  }).join('');
+}
+
+// ── Top nodes bar chart ─────────────────────────────────
+function drawTopNodes(data) {
+  const el = document.getElementById('topnodes-svg');
+  const W = el.clientWidth || 680, H = 380;
+  const m = {top:20, right:80, bottom:30, left:160};
+  const iW = W - m.left - m.right, iH = H - m.top - m.bottom;
+
+  const svg = d3.select('#topnodes-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  const x = d3.scaleLinear().domain([0, d3.max(data, d => d.in_deg) * 1.08]).range([0, iW]);
+  const y = d3.scaleBand().domain(data.map(d => d.name)).range([0, iH]).padding(0.25);
+
+  g.append('g').call(d3.axisLeft(y).tickSize(0))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('text').attr('fill','#bbb').attr('font-size',10)
+      .text(t => t.replace(/_/g,' ').replace(/\s*\(.*\)/,'')));
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(5).tickSize(4))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',9));
+
+  g.selectAll('rect').data(data).enter().append('rect')
+    .attr('x',0).attr('y', d => y(d.name))
+    .attr('height', y.bandwidth())
+    .attr('width',0)
+    .attr('fill','#e63946').attr('rx',2).attr('opacity',0.9)
+    .on('mousemove', (e,d) => showTT(e, `<strong>${d.name.replace(/_/g,' ')}</strong><br>in:${d.in_deg} · out:${d.out_deg}`))
+    .on('mouseleave', hideTT)
+    .transition().duration(700).delay((_,i)=>i*40)
+    .attr('width', d => x(d.in_deg));
+
+  g.selectAll('text.val').data(data).enter().append('text')
+    .attr('x', d => x(d.in_deg)+5).attr('y', d => y(d.name)+y.bandwidth()/2+4)
+    .attr('fill','#888').attr('font-size',9)
+    .text(d => `${d.in_deg}`);
+}
+
+// ── Degree distribution ─────────────────────────────────
+function drawDegDist(dist) {
+  const el = document.getElementById('degdist-svg');
+  const W = el.clientWidth || 680, H = 360;
+  const m = {top:20, right:20, bottom:44, left:52};
+  const iW = W - m.left - m.right, iH = H - m.top - m.bottom;
+
+  const svg = d3.select('#degdist-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${m.left},${m.top})`);
+
+  const allData = [...dist.in, ...dist.out];
+  const maxDeg = d3.max(allData, d => d.deg);
+  const maxCount = d3.max(allData, d => d.count);
+
+  const x = d3.scaleLinear().domain([0, maxDeg*1.02]).range([0, iW]);
+  const y = d3.scaleLinear().domain([0, maxCount*1.05]).range([iH, 0]);
+
+  g.append('g').attr('transform',`translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(8).tickSize(-iH))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('.tick line').attr('stroke','#1e1e1e'))
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+  g.append('g')
+    .call(d3.axisLeft(y).ticks(6).tickSize(-iW))
+    .call(ax => ax.select('.domain').remove())
+    .call(ax => ax.selectAll('.tick line').attr('stroke','#1e1e1e'))
+    .call(ax => ax.selectAll('text').attr('fill','#666').attr('font-size',10));
+
+  g.append('text').attr('x',iW/2).attr('y',iH+36).attr('text-anchor','middle')
+    .attr('fill','#666').attr('font-size',11).text('Degree k');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-38)
+    .attr('text-anchor','middle').attr('fill','#666').attr('font-size',11).text('Count');
+
+  g.selectAll('circle.in').data(dist.in).enter().append('circle')
+    .attr('cx', d => x(d.deg)).attr('cy', d => y(d.count))
+    .attr('r',4).attr('fill','#e63946').attr('opacity',0.85)
+    .attr('stroke','#0d0d0d').attr('stroke-width',1)
+    .on('mousemove', (e,d) => showTT(e, `In-degree ${d.deg}: ${d.count} rappers`))
+    .on('mouseleave', hideTT);
+
+  g.selectAll('circle.out').data(dist.out).enter().append('circle')
+    .attr('cx', d => x(d.deg)).attr('cy', d => y(d.count))
+    .attr('r',4).attr('fill','#457b9d').attr('opacity',0.85)
+    .attr('stroke','#0d0d0d').attr('stroke-width',1)
+    .on('mousemove', (e,d) => showTT(e, `Out-degree ${d.deg}: ${d.count} rappers`))
+    .on('mouseleave', hideTT);
+
+  const lg = g.append('g').attr('transform',`translate(${iW-120},8)`);
+  lg.append('circle').attr('cx',6).attr('cy',6).attr('r',4).attr('fill','#e63946');
+  lg.append('text').attr('x',16).attr('y',10).attr('fill','#ccc').attr('font-size',10).text('In-degree');
+  lg.append('circle').attr('cx',6).attr('cy',22).attr('r',4).attr('fill','#457b9d');
+  lg.append('text').attr('x',16).attr('y',26).attr('fill','#ccc').attr('font-size',10).text('Out-degree');
+}
+
+// ── Network visualization ───────────────────────────────
+function initNetwork(data) {
+  const wrap = document.getElementById('network-svg');
+  const parentW = wrap.parentElement.clientWidth || 900;
+  const stacked = window.innerWidth <= 720;
+  const W = stacked ? Math.max(320, parentW) : Math.max(400, parentW - 260);
+  const H = stacked ? 400 : 550;
+  wrap.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  wrap.setAttribute('width', W);
+  wrap.setAttribute('height', H);
+
+  svg = d3.select('#network-svg');
+  const g = svg.append('g');
+  svg.call(d3.zoom().scaleExtent([0.2,6]).on('zoom', e => g.attr('transform', e.transform)));
+
+  gLinks = g.append('g');
+  gNodes = g.append('g');
+
+  // Build adjacency list for in-browser shuffle
+  const nodes = data.nodes.map(d => ({...d}));
+  const links = data.links.map(d => ({source: d.source, target: d.target}));
+
+  nodes.forEach(n => { nodeMap[n.id] = n; });
+  buildAdj(nodes, links);
+
+  document.getElementById('p-nodes').textContent = nodes.length;
+  document.getElementById('p-edges').textContent = links.length;
+
+  // Draw links
+  gLinks.selectAll('line').data(links).enter().append('line')
+    .attr('stroke','#444').attr('stroke-width',0.6).attr('stroke-opacity',0.3);
+
+  // Draw nodes
+  const nodeR = d => Math.max(4, Math.min(16, 3 + (d.in_deg || 0) * 0.3));
+
+  gNodes.selectAll('circle').data(nodes).enter().append('circle')
+    .attr('r', nodeR)
+    .attr('fill', d => COMM_PALETTE[d.community % COMM_PALETTE.length])
+    .attr('stroke','#0d0d0d').attr('stroke-width',0.6)
+    .on('mousemove', (e,d) => showTT(e,
+      `<strong>${d.name || d.id.replace(/_/g,' ')}</strong><br>in:${d.in_deg} · out:${d.out_deg}<br>Community ${d.community}`))
+    .on('mouseleave', hideTT)
+    .call(d3.drag()
+      .on('start',(e,d)=>{if(!e.active)simulation.alphaTarget(0.3).restart();d.fx=d.x;d.fy=d.y;})
+      .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y;})
+      .on('end',(e,d)=>{if(!e.active)simulation.alphaTarget(0);d.fx=null;d.fy=null;}));
+
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d => d.id).distance(40).strength(0.2))
+    .force('charge', d3.forceManyBody().strength(-80).distanceMax(200))
+    .force('center', d3.forceCenter(W/2, H/2))
+    .force('x', d3.forceX(W/2).strength(0.04))
+    .force('y', d3.forceY(H/2).strength(0.04))
+    .force('collide', d3.forceCollide().radius(d => nodeR(d) + 2))
+    .on('tick', () => {
+      gLinks.selectAll('line')
+        .attr('x1',d=>d.source.x).attr('y1',d=>d.source.y)
+        .attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+      gNodes.selectAll('circle')
+        .attr('cx',d=>d.x).attr('cy',d=>d.y);
+    });
+}
+
+function buildAdj(nodes, links) {
+  adjList = {};
+  nodes.forEach(n => { adjList[n.id] = new Set(); });
+  links.forEach(l => {
+    const s = l.source.id ?? l.source;
+    const t = l.target.id ?? l.target;
+    if (adjList[s]) adjList[s].add(t);
+    if (adjList[t]) adjList[t].add(s);
+  });
+}
+
+// ── Metric bars ─────────────────────────────────────────
+const METRIC_DEFS = [
+  {key:'clustering', label:'Clustering', fmt: v => v.toFixed(4)},
+  {key:'triangles', label:'Triangles', fmt: v => Math.round(v).toLocaleString()},
+  {key:'assortativity', label:'Assortativity', fmt: v => v.toFixed(4)},
+  {key:'friendship_paradox', label:'Friendship paradox', fmt: v => (v*100).toFixed(0)+'%'},
+];
+
+function initMetricBars(charts) {
+  const container = document.getElementById('metric-bars');
+  const r = charts.comparison.real;
+  const nm = charts.comparison.null_mean;
+
+  container.innerHTML = METRIC_DEFS.map(def => {
+    const rv = r[def.key] || 0;
+    const nv = nm[def.key] || 0;
+    const maxVal = Math.max(Math.abs(rv), Math.abs(nv)) * 1.2 || 1;
+    const rPct = Math.abs(rv) / maxVal * 100;
+    const nPct = Math.abs(nv) / maxVal * 100;
+    return `
+      <div class="metric-bar-group" data-key="${def.key}" data-max="${maxVal}">
+        <div class="metric-bar-label">${def.label}</div>
+        <div class="bar-wrap">
+          <div class="bar-track"><div class="bar-fill real" style="width:${rPct}%"></div></div>
+          <div class="bar-val real">${def.fmt(rv)}</div>
+        </div>
+        <div class="bar-wrap" style="margin-top:2px">
+          <div class="bar-track"><div class="bar-fill null" id="bar-null-${def.key}" style="width:${nPct}%"></div></div>
+          <div class="bar-val null" id="val-null-${def.key}">${def.fmt(nv)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function updateMetricBars(metrics) {
+  METRIC_DEFS.forEach(def => {
+    const group = document.querySelector(`.metric-bar-group[data-key="${def.key}"]`);
+    if (!group) return;
+    const maxVal = parseFloat(group.dataset.max) || 1;
+    const v = metrics[def.key] || 0;
+    const pct = Math.abs(v) / maxVal * 100;
+    const bar = document.getElementById(`bar-null-${def.key}`);
+    const val = document.getElementById(`val-null-${def.key}`);
+    if (bar) bar.style.width = Math.min(pct, 100) + '%';
+    if (val) val.textContent = def.fmt(v);
+  });
+}
+
+// ── In-browser double edge swap ─────────────────────────
+function doubleEdgeSwap(adj, nSwaps) {
+  const nodeIds = Object.keys(adj);
+  // Collect all edges as pairs
+  const edges = [];
+  const edgeSet = new Set();
+  nodeIds.forEach(u => {
+    adj[u].forEach(v => {
+      const key = u < v ? `${u}|${v}` : `${v}|${u}`;
+      if (!edgeSet.has(key)) {
+        edgeSet.add(key);
+        edges.push([u, v]);
+      }
+    });
+  });
+
+  let swapped = 0;
+  for (let attempt = 0; attempt < nSwaps * 3 && swapped < nSwaps; attempt++) {
+    const i = Math.floor(Math.random() * edges.length);
+    const j = Math.floor(Math.random() * edges.length);
+    if (i === j) continue;
+
+    let [a, b] = edges[i];
+    let [c, d] = edges[j];
+
+    // Randomly flip swap direction
+    if (Math.random() < 0.5) [c, d] = [d, c];
+
+    // Check: no self-loops, no multi-edges
+    if (a === d || c === b) continue;
+    const key1 = a < d ? `${a}|${d}` : `${d}|${a}`;
+    const key2 = c < b ? `${c}|${b}` : `${b}|${c}`;
+    if (edgeSet.has(key1) || edgeSet.has(key2)) continue;
+
+    // Remove old edges
+    const oldKey1 = a < b ? `${a}|${b}` : `${b}|${a}`;
+    const oldKey2 = c < d ? `${c}|${d}` : `${d}|${c}`;
+    edgeSet.delete(oldKey1);
+    edgeSet.delete(oldKey2);
+    adj[a].delete(b); adj[b].delete(a);
+    adj[c].delete(d); adj[d].delete(c);
+
+    // Add new edges
+    edgeSet.add(key1);
+    edgeSet.add(key2);
+    adj[a].add(d); adj[d].add(a);
+    adj[c].add(b); adj[b].add(c);
+    edges[i] = [a, d];
+    edges[j] = [c, b];
+    swapped++;
+  }
+  return edges;
+}
+
+// ── Compute metrics from adjacency list ─────────────────
+function computeClusteringFromAdj(adj) {
+  let triangles = 0, triplets = 0;
+  const nodeIds = Object.keys(adj);
+  for (const u of nodeIds) {
+    const neighbors = [...adj[u]];
+    const k = neighbors.length;
+    if (k < 2) continue;
+    triplets += k * (k - 1) / 2;
+    for (let i = 0; i < k; i++) {
+      for (let j = i + 1; j < k; j++) {
+        if (adj[neighbors[i]].has(neighbors[j])) triangles++;
+      }
+    }
+  }
+  return {
+    clustering: triplets > 0 ? triangles / triplets : 0,
+    triangles: Math.round(triangles / 3)
+  };
+}
+
+function computeAssortativityFromAdj(adj) {
+  const nodeIds = Object.keys(adj);
+  const deg = {};
+  nodeIds.forEach(n => { deg[n] = adj[n].size; });
+
+  let sumXY = 0, sumX = 0, sumY = 0, sumX2 = 0, sumY2 = 0, m = 0;
+  const seen = new Set();
+  nodeIds.forEach(u => {
+    adj[u].forEach(v => {
+      const key = u < v ? `${u}|${v}` : `${v}|${u}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      const du = deg[u], dv = deg[v];
+      sumXY += du * dv;
+      sumX += du; sumY += dv;
+      sumX2 += du * du; sumY2 += dv * dv;
+      m++;
+    });
+  });
+  if (m === 0) return 0;
+  const num = sumXY / m - (sumX / m) * (sumY / m);
+  const den = Math.sqrt((sumX2 / m - (sumX / m) ** 2) * (sumY2 / m - (sumY / m) ** 2));
+  return den === 0 ? 0 : num / den;
+}
+
+function computeFriendshipParadoxFromAdj(adj) {
+  const nodeIds = Object.keys(adj);
+  const deg = {};
+  nodeIds.forEach(n => { deg[n] = adj[n].size; });
+  let count = 0, total = 0;
+  nodeIds.forEach(u => {
+    if (adj[u].size === 0) return;
+    total++;
+    let sum = 0;
+    adj[u].forEach(v => { sum += deg[v]; });
+    const avgNeighDeg = sum / adj[u].size;
+    if (avgNeighDeg > deg[u]) count++;
+  });
+  return total > 0 ? count / nodeIds.length : 0;
+}
+
+// ── Shuffle action ──────────────────────────────────────
+function doShuffle() {
+  // Deep copy adjacency list for shuffling
+  const shuffledAdj = {};
+  Object.keys(adjList).forEach(n => {
+    shuffledAdj[n] = new Set(adjList[n]);
+  });
+
+  const nEdges = Object.keys(shuffledAdj).reduce((s, n) => s + shuffledAdj[n].size, 0) / 2;
+  const newEdges = doubleEdgeSwap(shuffledAdj, Math.round(nEdges * 5));
+
+  // Compute metrics on shuffled network
+  const clust = computeClusteringFromAdj(shuffledAdj);
+  const assort = computeAssortativityFromAdj(shuffledAdj);
+  const fp = computeFriendshipParadoxFromAdj(shuffledAdj);
+
+  const shuffledMetrics = {
+    clustering: clust.clustering,
+    triangles: clust.triangles,
+    assortativity: assort,
+    friendship_paradox: fp
+  };
+
+  updateMetricBars(shuffledMetrics);
+  shuffleCount++;
+  document.getElementById('shuffle-count').textContent = shuffleCount;
+  document.getElementById('p-shuffles').textContent = shuffleCount;
+
+  // Animate edges in D3 — redraw links from shuffled edges
+  const linkData = newEdges.map(([s, t]) => ({source: s, target: t}));
+  gLinks.selectAll('line').remove();
+  gLinks.selectAll('line').data(linkData).enter().append('line')
+    .attr('stroke','#457b9d').attr('stroke-width',0.6).attr('stroke-opacity',0)
+    .transition().duration(400).attr('stroke-opacity',0.25);
+
+  // Update simulation links
+  simulation.force('link').links(
+    linkData.map(l => ({
+      source: simulation.nodes().find(n => n.id === l.source) || l.source,
+      target: simulation.nodes().find(n => n.id === l.target) || l.target
+    }))
+  );
+  simulation.alpha(0.3).restart();
+
+  // Flash edges blue then fade to grey
+  setTimeout(() => {
+    gLinks.selectAll('line')
+      .transition().duration(800).attr('stroke','#444');
+  }, 600);
+}
+
+// ── Scroll reveal ───────────────────────────────────────
+function initScrollReveal() {
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+    });
+  }, {threshold: 0.12});
+  document.querySelectorAll('.figure, .tldr, .numbers, .surprise, .refs')
+    .forEach(el => io.observe(el));
+}
+</script>
+</body>
+</html>
