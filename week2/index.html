@@ -314,7 +314,7 @@
     <ul>
       <li><strong>Clustering is not random.</strong> The real rapper network has dramatically higher clustering than degree-preserving shuffles. Structure matters &mdash; who links to whom is not just a function of how many links each page has.</li>
       <li><strong>Triangles everywhere.</strong> Real networks close triangles far more often than random rewirings. If A links to B and B links to C, then A very likely links to C &mdash; a pattern destroyed by shuffling.</li>
-      <li><strong>The friendship paradox is real.</strong> Most rappers' neighbors have higher average degree than they do. Your friends really are more popular than you.</li>
+      <li><strong>The friendship paradox holds &mdash; but isn't special to this network.</strong> 76% of rappers have neighbors with higher average degree than their own. That's real, but a degree-preserving random shuffle produces it even more often (84%, z&nbsp;=&nbsp;&minus;4.17) &mdash; so the raw 76% alone doesn't say anything about rappers specifically.</li>
     </ul>
   </div>
 
@@ -382,6 +382,12 @@
     degree-preserving random graph could produce. Assortativity, path length, and modularity
     are also significant, confirming that the wiring pattern is not a side-effect of
     the degree sequence.
+  </p>
+  <p>
+    One metric goes the other way: <strong>friendship paradox</strong> is z&nbsp;&asymp;&nbsp;&minus;4.17,
+    meaning the real network shows the paradox <em>less</em> often than the null shuffles do, not more.
+    We unpack that below &mdash; it's the one place our headline framing (see "what surprised us")
+    didn't survive checking against the null.
   </p>
 
   <h2>Top connected rappers</h2>
@@ -525,6 +531,19 @@
       with heavy-tailed degree distributions &mdash; high-degree nodes appear in many neighborhoods,
       pulling up the average.
     </p>
+    <p>
+      But 76% on its own doesn't prove anything about <em>this</em> network &mdash; the paradox shows
+      up in almost any network with degree variance, including a randomly shuffled one with the
+      same degree sequence. When we check against our null model, the shuffled versions experience
+      the paradox <em>more</em> often (84% vs our 76%, z&nbsp;=&nbsp;&minus;4.17, empirical p&nbsp;=&nbsp;1.000
+      for the one-sided "real &gt; null" test) &mdash; the opposite of what we'd need to call this a
+      distinguishing feature of rapper Wikipedia links. One plausible reason: the real network is
+      mildly <strong>assortative</strong> (popular rappers link to other popular rappers, +0.13), while
+      the degree-preserving shuffle comes out disassortative on average (&minus;0.08). Assortative
+      mixing means a node's neighbors' degrees track its own degree more closely, which narrows the
+      gap the paradox depends on &mdash; but we haven't confirmed that mechanism directly, so treat it
+      as a hypothesis, not a result.
+    </p>
 
     <div class="surprise">
       <span class="surprise-tag">What surprised us</span>
@@ -533,10 +552,10 @@
         <strong>1. Clustering survives shuffling poorly.</strong> The null model produces near-zero clustering even though every node keeps its exact degree. Structure is not a side-effect of popularity.
       </p>
       <p>
-        <strong>2. The friendship paradox is strong.</strong> In most real networks, 60-80% of nodes experience it. Our rapper network is no exception &mdash; the paradox is a mathematical consequence of degree variance, not a cultural observation.
+        <strong>2. The friendship paradox didn't distinguish the real network.</strong> 60-80% of nodes experiencing it is normal for almost any network with degree variance &mdash; including our degree-preserving shuffle, which showed it even more (84% vs 76%). Checking the raw percentage against a null model is exactly what caught this; without that check we'd have reported it backwards.
       </p>
       <p>
-        <strong>3. Assortativity flips sign.</strong> The real network can be disassortative (popular rappers link to less popular ones), while shuffled versions tend toward zero. The mixing pattern is a real structural feature.
+        <strong>3. Assortativity flips sign &mdash; the real network is the assortative one.</strong> Popular rappers link to other popular rappers (+0.13), while the degree-preserving shuffle comes out mildly disassortative (&minus;0.08) on average. The mixing pattern is a real structural feature that the null model doesn't reproduce, even though it keeps every node's exact degree.
       </p>
     </div>
 
