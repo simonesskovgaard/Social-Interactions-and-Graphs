@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Week 3 — Six Degrees of Spider-Man (It's Actually Three) | 02805 Social Graphs</title>
-  <meta name="description" content="Every reachable Marvel character is at most three wiki-links from Spider-Man. And the single most surprising bridge in the network has just two links — validated against 200 degree-preserving shuffles.">
+  <title>Week 3: Six Degrees of Spider-Man (It's Actually Three) | 02805 Social Graphs</title>
+  <meta name="description" content="Every reachable Marvel character is at most three wiki-links from Spider-Man. And the single most surprising bridge in the network has just two links, validated against 200 degree-preserving shuffles.">
   <meta property="og:title" content="Six Degrees of Spider-Man (It's Actually Three)">
   <meta property="og:description" content="Type a character, get the chain to Spider-Man. Then meet the two-link character whose betweenness z-score is off the chart.">
   <meta property="og:type" content="article">
@@ -135,17 +135,17 @@
   <p class="post-intro">
     "Six degrees of separation" is the famous claim for social networks in general.
     In the Marvel wiki-link network, every reachable character is at most three hops
-    from Spider-Man. We built a tool to show the exact chain for any character —
+    from Spider-Man. We built a tool to show the exact chain for any character,
     then went looking for the single most surprising bridge in the whole network,
     checked properly against 200 degree-preserving shuffles.
   </p>
 
   <div class="tldr">
-    <div class="tldr-label">TL;DR — 3 things we found</div>
+    <div class="tldr-label">TL;DR: 3 things we found</div>
     <ul>
-      <li><strong>Three, not six.</strong> Spider-Man reaches all 277 characters in the giant component in at most 3 hops — which makes sense once you know he's also the network's center (radius 3) from week 3's distance measures.</li>
-      <li><strong>Rockman is the most surprising character in the network, by far.</strong> Betweenness z-score of <strong>+13.45</strong> against a degree-preserving null — the next closest character isn't even half that. He has exactly two links.</li>
-      <li><strong>It's not about how many links Rockman has — it's who's on the other end.</strong> One of his two neighbors is a character whose <em>only</em> link in the entire 303-character network is back to Rockman. He's the sole door to an entire pocket of the wiki.</li>
+      <li><strong>Three, not six.</strong> Spider-Man reaches all 277 characters in the giant component in at most 3 hops, which makes sense once you know he's also the network's center (radius 3) from week 3's distance measures.</li>
+      <li><strong>Rockman is the most surprising character in the network, by far.</strong> Betweenness z-score of <strong>+13.45</strong> against a degree-preserving null. The next closest character isn't even half that. He has exactly two links.</li>
+      <li><strong>It's not about how many links Rockman has. It's who's on the other end.</strong> One of his two neighbors is a character whose <em>only</em> link in the entire 303-character network is back to Rockman. He's the sole door to an entire pocket of the wiki.</li>
     </ul>
   </div>
 
@@ -163,7 +163,7 @@
   <p>
     Type any Marvel character and get the shortest chain of wiki-links connecting them to
     Spider-Man. Every path below is a real shortest path through the undirected giant
-    component — precomputed from a single breadth-first search rooted at Spider-Man.
+    component, precomputed from a single breadth-first search rooted at Spider-Man.
   </p>
 
   <div class="sixdeg-tool">
@@ -185,12 +185,12 @@
 
   <h2>Everyone's closer than you'd think</h2>
   <p>
-    Spider-Man has degree 106 in the undirected giant component — over a third of every
+    Spider-Man has degree 106 in the undirected giant component: over a third of every
     other tracked character links to or from him directly. That single fact does most of
     the work: <strong>106</strong> characters are one hop away, another <strong>152</strong>
     are two hops away (a friend of a friend), and only <strong>18</strong> characters sit at
     the maximum distance of three. Nobody in the reachable network is a stranger for long.
-    This isn't a coincidence — Spider-Man is also the network's <em>center</em> (the node with
+    This isn't a coincidence: Spider-Man is also the network's <em>center</em> (the node with
     the smallest eccentricity, radius&nbsp;3), so by definition nothing can be farther from
     him than the radius itself.
   </p>
@@ -198,8 +198,8 @@
   <h2>The most surprising bridge, checked properly</h2>
   <p>
     "Surprising" needs a baseline, or it's just an anecdote. We ran <strong>200
-    degree-preserving shuffles</strong> of the giant component — the same double-edge-swap
-    procedure from exercise 3.8 — recomputed betweenness centrality after every shuffle, and
+    degree-preserving shuffles</strong> of the giant component, the same double-edge-swap
+    procedure from exercise 3.8, recomputed betweenness centrality after every shuffle, and
     turned each character's real betweenness into a <strong>z-score</strong>: how many standard
     deviations above the shuffled average their real position is. A node whose betweenness is
     purely a byproduct of its degree should land near z&nbsp;=&nbsp;0. A node sitting in a
@@ -216,8 +216,8 @@
 
   <h2>Why Rockman, specifically</h2>
   <p>
-    Rockman has degree 2 — one of the least-connected characters in the giant component —
-    yet his betweenness centrality (0.0072) already beats most 15–20-link characters outright,
+    Rockman has degree 2, one of the least-connected characters in the giant component,
+    yet his betweenness centrality (0.0072) already beats most 15-20-link characters outright,
     and against the null model it's a runaway outlier. The reason is entirely structural,
     not about popularity:
   </p>
@@ -232,7 +232,7 @@
   <p>
     That's also why degree-preserving shuffling is the right null here rather than just
     comparing raw degree ranks: a random rewiring that keeps Rockman at degree 2 almost never
-    happens to route The Witness's one link through him specifically — so the real network's
+    happens to route The Witness's one link through him specifically, so the real network's
     betweenness for Rockman towers over what chance alone predicts.
   </p>
 
@@ -241,7 +241,7 @@
     <ul style="margin:0;padding-left:1.2rem;">
       <li><strong>Data:</strong> the same frozen Week 1 snapshot (303 characters, 1,784 directed / 1,434 undirected wiki-links) used throughout this site.</li>
       <li><strong>Giant component:</strong> largest connected component of the undirected projection, 277 of 303 characters.</li>
-      <li><strong>Paths:</strong> single-source BFS rooted at Spider-Man on the undirected giant component (<code>networkx.single_source_shortest_path</code>), precomputed once and shipped as static JSON — no client-side graph traversal needed.</li>
+      <li><strong>Paths:</strong> single-source BFS rooted at Spider-Man on the undirected giant component (<code>networkx.single_source_shortest_path</code>), precomputed once and shipped as static JSON. No client-side graph traversal needed.</li>
       <li><strong>Null model:</strong> 200 independent degree-preserving double-edge-swaps per exercise 3.8's method (<code>networkx.double_edge_swap</code>, 5×|E| swap attempts each), betweenness recomputed after every shuffle.</li>
       <li><strong>z-score:</strong> (real betweenness − mean of 200 shuffles) / (standard deviation of 200 shuffles), per node.</li>
       <li><strong>Tools:</strong> Python / NetworkX for all graph computation; D3.js v7 for the chart; the six-degrees tool is a plain lookup against a precomputed path table.</li>
