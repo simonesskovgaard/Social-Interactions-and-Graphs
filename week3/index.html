@@ -243,7 +243,7 @@
       <li><strong>Giant component:</strong> largest connected component of the undirected projection, 277 of 303 characters.</li>
       <li><strong>Paths:</strong> single-source BFS rooted at Spider-Man on the undirected giant component (<code>networkx.single_source_shortest_path</code>), precomputed once and shipped as static JSON. No client-side graph traversal needed.</li>
       <li><strong>Null model:</strong> 200 independent degree-preserving double-edge-swaps per exercise 3.8's method (<code>networkx.double_edge_swap</code>, 5×|E| swap attempts each), betweenness recomputed after every shuffle.</li>
-      <li><strong>z-score:</strong> (real betweenness − mean of 200 shuffles) / (standard deviation of 200 shuffles), per node.</li>
+      <li><strong>z-score:</strong> (real betweenness minus mean of 200 shuffles) / (standard deviation of 200 shuffles), per node.</li>
       <li><strong>Tools:</strong> Python / NetworkX for all graph computation; D3.js v7 for the chart; the six-degrees tool is a plain lookup against a precomputed path table.</li>
       <li><strong>Source:</strong> <a href="https://github.com/simonesskovgaard/Social-Interactions-and-Graphs" target="_blank">github.com/simonesskovgaard/Social-Interactions-and-Graphs</a></li>
     </ul>
