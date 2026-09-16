@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Week 3 — Six Degrees of Spider-Man (It's Actually Three) | 02805 Social Graphs</title>
+  <meta name="description" content="Every reachable Marvel character is at most three wiki-links from Spider-Man. And the single most surprising bridge in the network has just two links — validated against 200 degree-preserving shuffles.">
+  <meta property="og:title" content="Six Degrees of Spider-Man (It's Actually Three)">
+  <meta property="og:description" content="Type a character, get the chain to Spider-Man. Then meet the two-link character whose betweenness z-score is off the chart.">
+  <meta property="og:type" content="article">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css">
+  <style>
+    /* ── NUMBERS GRID (same pattern as week 2) ── */
+    .numbers {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+      gap:1px;
+      background:#2a2a2a;
+      border:1px solid #2a2a2a;
+      border-radius:4px;
+      margin:2rem 0;
+      overflow:hidden;
+    }
+    .num-cell {
+      background:#131313;
+      padding:1rem 1.1rem;
+      display:flex;
+      flex-direction:column;
+      gap:.2rem;
+    }
+    .num-val { font-size:1.6rem; font-weight:800; color:#e63946; letter-spacing:-1px; line-height:1; }
+    .num-lbl { font-size:.68rem; color:#777; letter-spacing:.7px; text-transform:uppercase; }
+    .num-note { font-size:.7rem; color:#555; margin-top:.15rem; }
+
+    /* ── TL;DR ── */
+    .tldr {
+      background: linear-gradient(180deg, #171717 0%, #131313 100%);
+      border:1px solid #2a2a2a;
+      border-left:3px solid #e63946;
+      border-radius:0 6px 6px 0;
+      padding:1.2rem 1.4rem;
+      margin:2rem 0 3rem;
+    }
+    .tldr-label { font-size:.7rem; letter-spacing:1.5px; text-transform:uppercase; color:#e63946; font-weight:700; margin-bottom:.7rem; }
+    .tldr ul { list-style:none; padding:0; margin:0; }
+    .tldr li { padding:.4rem 0; color:#ddd; font-size:.95rem; border-bottom:1px solid #222; }
+    .tldr li:last-child { border-bottom:0; }
+    .tldr li strong { color:#e63946; font-weight:700; }
+
+    /* ── SIX-DEGREES TOOL ── */
+    .sixdeg-tool {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.4rem;
+      margin: 1.5rem 0 2.5rem;
+    }
+    .sixdeg-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+    .sixdeg-row input[type="text"] {
+      flex: 1;
+      min-width: 200px;
+      background: #0d0d0d;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.65rem 0.8rem;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 0.95rem;
+    }
+    .sixdeg-row input[type="text"]:focus { outline: 1px solid var(--accent); }
+    .sixdeg-row button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 0.65rem 1.2rem;
+      font-family: var(--font);
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    .sixdeg-row button:hover { opacity: 0.88; }
+    .sixdeg-quick { margin-top: 0.7rem; font-size: 0.82rem; color: var(--muted); }
+    .sixdeg-quick button {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 3px;
+      padding: 0.2rem 0.55rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-left: 0.3rem;
+    }
+    .sixdeg-quick button:hover { color: var(--text); border-color: var(--muted); }
+    .chain { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 1.2rem; min-height: 2.2rem; }
+    .chain-node {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+    .chain-node.endpoint { border-color: var(--accent); color: var(--accent); }
+    .chain-arrow { color: var(--muted); font-size: 0.9rem; }
+    .chain-summary { margin-top: 0.8rem; font-size: 0.85rem; color: var(--muted); }
+    .chain-summary strong { color: var(--text); }
+
+    /* ── Z-SCORE CHART ── */
+    #zscore-chart-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.2rem 1.2rem 0.6rem; margin: 1.5rem 0; }
+    #zscore-svg { width: 100%; height: auto; }
+    .axis text { fill: var(--muted); font-size: 0.72rem; }
+    .axis path, .axis line { stroke: var(--border); }
+    .zbar { fill: var(--accent2); }
+    .zbar.rockman { fill: var(--accent); }
+    .zbar-label { fill: #ccc; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="../index.html" class="nav-logo">Network Lab</a>
+  <div class="nav-links">
+    <a href="../index.html">← All weeks</a>
+    <a href="https://github.com/simonesskovgaard/Social-Interactions-and-Graphs" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<article class="post-wrap">
+
+  <p class="post-meta">Week 03 · 16 September 2026 · 02805 Social Graphs</p>
+  <h1>Six Degrees of Spider-Man (It's Actually Three)</h1>
+  <p class="post-intro">
+    "Six degrees of separation" is the famous claim for social networks in general.
+    In the Marvel wiki-link network, every reachable character is at most three hops
+    from Spider-Man. We built a tool to show the exact chain for any character —
+    then went looking for the single most surprising bridge in the whole network,
+    checked properly against 200 degree-preserving shuffles.
+  </p>
+
+  <div class="tldr">
+    <div class="tldr-label">TL;DR — 3 things we found</div>
+    <ul>
+      <li><strong>Three, not six.</strong> Spider-Man reaches all 277 characters in the giant component in at most 3 hops — which makes sense once you know he's also the network's center (radius 3) from week 3's distance measures.</li>
+      <li><strong>Rockman is the most surprising character in the network, by far.</strong> Betweenness z-score of <strong>+13.45</strong> against a degree-preserving null — the next closest character isn't even half that. He has exactly two links.</li>
+      <li><strong>It's not about how many links Rockman has — it's who's on the other end.</strong> One of his two neighbors is a character whose <em>only</em> link in the entire 303-character network is back to Rockman. He's the sole door to an entire pocket of the wiki.</li>
+    </ul>
+  </div>
+
+  <h2>The numbers</h2>
+  <div class="numbers">
+    <div class="num-cell"><span class="num-val">277</span><span class="num-lbl">Giant component</span><span class="num-note">of 303 characters</span></div>
+    <div class="num-cell"><span class="num-val">277 / 277</span><span class="num-lbl">Reachable from Spider-Man</span><span class="num-note">100%</span></div>
+    <div class="num-cell"><span class="num-val">3</span><span class="num-lbl">Max distance</span><span class="num-note">hops from Spider-Man</span></div>
+    <div class="num-cell"><span class="num-val">106 / 152 / 18</span><span class="num-lbl">Ring sizes</span><span class="num-note">1&nbsp;/&nbsp;2&nbsp;/&nbsp;3 hops out</span></div>
+    <div class="num-cell"><span class="num-val">+13.45</span><span class="num-lbl">Top z-score</span><span class="num-note">Rockman, betweenness</span></div>
+    <div class="num-cell"><span class="num-val">200</span><span class="num-lbl">Shuffles</span><span class="num-note">degree-preserving null</span></div>
+  </div>
+
+  <h2>Try it: chain to Spider-Man</h2>
+  <p>
+    Type any Marvel character and get the shortest chain of wiki-links connecting them to
+    Spider-Man. Every path below is a real shortest path through the undirected giant
+    component — precomputed from a single breadth-first search rooted at Spider-Man.
+  </p>
+
+  <div class="sixdeg-tool">
+    <div class="sixdeg-row">
+      <input type="text" id="char-input" list="char-list" placeholder="Type a character name…" autocomplete="off">
+      <datalist id="char-list"></datalist>
+      <button id="chain-btn">Show chain</button>
+    </div>
+    <div class="sixdeg-quick">
+      Try:
+      <button data-name="Kid Colt">the farthest character</button>
+      <button data-name="Rockman (character)">Rockman</button>
+      <button data-name="Black Widow (Natasha Romanova)">Black Widow</button>
+      <button data-name="Hercules (Marvel Comics)">Hercules</button>
+    </div>
+    <div class="chain" id="chain-display"></div>
+    <div class="chain-summary" id="chain-summary"></div>
+  </div>
+
+  <h2>Everyone's closer than you'd think</h2>
+  <p>
+    Spider-Man has degree 106 in the undirected giant component — over a third of every
+    other tracked character links to or from him directly. That single fact does most of
+    the work: <strong>106</strong> characters are one hop away, another <strong>152</strong>
+    are two hops away (a friend of a friend), and only <strong>18</strong> characters sit at
+    the maximum distance of three. Nobody in the reachable network is a stranger for long.
+    This isn't a coincidence — Spider-Man is also the network's <em>center</em> (the node with
+    the smallest eccentricity, radius&nbsp;3), so by definition nothing can be farther from
+    him than the radius itself.
+  </p>
+
+  <h2>The most surprising bridge, checked properly</h2>
+  <p>
+    "Surprising" needs a baseline, or it's just an anecdote. We ran <strong>200
+    degree-preserving shuffles</strong> of the giant component — the same double-edge-swap
+    procedure from exercise 3.8 — recomputed betweenness centrality after every shuffle, and
+    turned each character's real betweenness into a <strong>z-score</strong>: how many standard
+    deviations above the shuffled average their real position is. A node whose betweenness is
+    purely a byproduct of its degree should land near z&nbsp;=&nbsp;0. A node sitting in a
+    structurally unusual spot stands out.
+  </p>
+
+  <div id="zscore-chart-wrap">
+    <svg id="zscore-svg" viewBox="0 0 640 420"></svg>
+  </div>
+  <p style="font-size:0.85rem;color:var(--muted);margin-top:-1rem;">
+    Top 15 characters by betweenness z-score against 200 degree-preserving shuffles.
+    Rockman's z-score of 13.45 is more than double the runner-up.
+  </p>
+
+  <h2>Why Rockman, specifically</h2>
+  <p>
+    Rockman has degree 2 — one of the least-connected characters in the giant component —
+    yet his betweenness centrality (0.0072) already beats most 15–20-link characters outright,
+    and against the null model it's a runaway outlier. The reason is entirely structural,
+    not about popularity:
+  </p>
+  <div class="callout">
+    Rockman's two neighbors are <strong>Black Widow</strong> (degree 25, well embedded in the
+    core of the network) and <strong>The Witness</strong>, whose <em>only</em> link anywhere in
+    all 303 characters is back to Rockman. Every shortest path that needs to reach The Witness
+    from anywhere else in the network has no choice but to pass through Rockman first. Two
+    links is enough to be indispensable, if one of them is the only door into an otherwise
+    sealed room.
+  </div>
+  <p>
+    That's also why degree-preserving shuffling is the right null here rather than just
+    comparing raw degree ranks: a random rewiring that keeps Rockman at degree 2 almost never
+    happens to route The Witness's one link through him specifically — so the real network's
+    betweenness for Rockman towers over what chance alone predicts.
+  </p>
+
+  <h2>Method &amp; data</h2>
+  <div class="callout">
+    <ul style="margin:0;padding-left:1.2rem;">
+      <li><strong>Data:</strong> the same frozen Week 1 snapshot (303 characters, 1,784 directed / 1,434 undirected wiki-links) used throughout this site.</li>
+      <li><strong>Giant component:</strong> largest connected component of the undirected projection, 277 of 303 characters.</li>
+      <li><strong>Paths:</strong> single-source BFS rooted at Spider-Man on the undirected giant component (<code>networkx.single_source_shortest_path</code>), precomputed once and shipped as static JSON — no client-side graph traversal needed.</li>
+      <li><strong>Null model:</strong> 200 independent degree-preserving double-edge-swaps per exercise 3.8's method (<code>networkx.double_edge_swap</code>, 5×|E| swap attempts each), betweenness recomputed after every shuffle.</li>
+      <li><strong>z-score:</strong> (real betweenness − mean of 200 shuffles) / (standard deviation of 200 shuffles), per node.</li>
+      <li><strong>Tools:</strong> Python / NetworkX for all graph computation; D3.js v7 for the chart; the six-degrees tool is a plain lookup against a precomputed path table.</li>
+      <li><strong>Source:</strong> <a href="https://github.com/simonesskovgaard/Social-Interactions-and-Graphs" target="_blank">github.com/simonesskovgaard/Social-Interactions-and-Graphs</a></li>
+    </ul>
+  </div>
+
+</article>
+
+<footer>
+  Built for 02805 Social Graphs and Interactions · DTU · 2026
+</footer>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+let NETWORK = null;
+let BY_NAME = new Map();
+let BY_ID = new Map();
+
+fetch('../assets/data/week3_network.json')
+  .then(r => r.json())
+  .then(data => {
+    NETWORK = data;
+    data.nodes.forEach(n => {
+      BY_NAME.set(n.name, n);
+      BY_ID.set(n.id, n);
+    });
+
+    // populate datalist for autocomplete
+    const datalist = document.getElementById('char-list');
+    data.nodes
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .forEach(n => {
+        const opt = document.createElement('option');
+        opt.value = n.name;
+        datalist.appendChild(opt);
+      });
+
+    drawZScoreChart(data.nodes);
+  });
+
+function showChain(name) {
+  const summary = document.getElementById('chain-summary');
+  const display = document.getElementById('chain-display');
+  display.innerHTML = '';
+  summary.textContent = '';
+
+  if (!NETWORK) return;
+  // try exact name match, then loose "starts with" fallback
+  let node = BY_NAME.get(name);
+  if (!node) {
+    const lower = name.trim().toLowerCase();
+    node = NETWORK.nodes.find(n => n.name.toLowerCase() === lower)
+        || NETWORK.nodes.find(n => n.name.toLowerCase().startsWith(lower));
+  }
+  if (!node) {
+    summary.textContent = `No character matching "${name}" found in the giant component.`;
+    return;
+  }
+
+  const path = node.path_to_spiderman; // array of node ids, Spider-Man first
+  path.forEach((id, i) => {
+    if (i > 0) {
+      const arrow = document.createElement('span');
+      arrow.className = 'chain-arrow';
+      arrow.textContent = '→';
+      display.appendChild(arrow);
+    }
+    const chip = document.createElement('span');
+    const charNode = BY_ID.get(id);
+    chip.className = 'chain-node' + (i === 0 || i === path.length - 1 ? ' endpoint' : '');
+    chip.textContent = charNode ? charNode.name : id;
+    display.appendChild(chip);
+  });
+
+  const hops = path.length - 1;
+  summary.innerHTML = hops === 0
+    ? `<strong>${node.name}</strong> is Spider-Man.`
+    : `<strong>${hops}</strong> hop${hops === 1 ? '' : 's'} from Spider-Man to <strong>${node.name}</strong>.`;
+}
+
+document.getElementById('chain-btn').addEventListener('click', () => {
+  showChain(document.getElementById('char-input').value);
+});
+document.getElementById('char-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') showChain(e.target.value);
+});
+document.querySelectorAll('.sixdeg-quick button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.getElementById('char-input').value = btn.dataset.name;
+    showChain(btn.dataset.name);
+  });
+});
+
+function drawZScoreChart(nodes) {
+  const top15 = nodes.slice().sort((a, b) => b.betweenness_z - a.betweenness_z).slice(0, 15);
+
+  const W = 640, H = 420;
+  const margin = { top: 10, right: 50, bottom: 30, left: 190 };
+  const iW = W - margin.left - margin.right;
+  const iH = H - margin.top - margin.bottom;
+
+  const svg = d3.select('#zscore-svg').attr('viewBox', `0 0 ${W} ${H}`);
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scaleLinear().domain([0, d3.max(top15, d => d.betweenness_z) * 1.1]).range([0, iW]);
+  const y = d3.scaleBand().domain(top15.map(d => d.name)).range([0, iH]).padding(0.25);
+
+  g.append('g').attr('class', 'axis')
+    .call(d3.axisLeft(y).tickSize(0));
+
+  g.append('g').attr('class', 'axis')
+    .attr('transform', `translate(0,${iH})`)
+    .call(d3.axisBottom(x).ticks(5).tickSize(4));
+
+  g.selectAll('.zbar')
+    .data(top15)
+    .join('rect')
+    .attr('class', d => 'zbar' + (d.name.startsWith('Rockman') ? ' rockman' : ''))
+    .attr('x', 0)
+    .attr('y', d => y(d.name))
+    .attr('width', d => x(d.betweenness_z))
+    .attr('height', y.bandwidth())
+    .attr('rx', 2);
+
+  g.selectAll('.zbar-label')
+    .data(top15)
+    .join('text')
+    .attr('class', 'zbar-label')
+    .attr('x', d => x(d.betweenness_z) + 6)
+    .attr('y', d => y(d.name) + y.bandwidth() / 2)
+    .attr('dy', '0.35em')
+    .text(d => d.betweenness_z.toFixed(2));
+}
+</script>
+
+</body>
+</html>
